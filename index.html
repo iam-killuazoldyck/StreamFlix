@@ -111,7 +111,11 @@ header {
     <input id="url" placeholder="Paste video URL...">
     <button onclick="loadVideo()">Play</button>
   </div>
-
+  <div class="input-box">
+    <input id="subUrl" placeholder="Subtitle URL (.vtt)">
+    <input type="file" id="subFile" accept=".vtt,.srt">
+    <button onclick="addSubtitle()">Add Subtitles</button>
+  </div>
   <div class="player-wrapper">
     <video id="player" controls></video>
   </div>
@@ -124,6 +128,34 @@ header {
 <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 
 <script>
+function addSubtitle() {
+  const url = document.getElementById('subUrl').value;
+  const file = document.getElementById('subFile').files[0];
+
+  // URL subtitles
+  if (url) {
+    player.addTrack({
+      kind: 'subtitles',
+      label: 'External Subtitle',
+      srclang: 'en',
+      src: url,
+      default: true
+    }, true);
+  }
+
+  // File upload subtitles
+  if (file) {
+    const fileURL = URL.createObjectURL(file);
+
+    player.addTrack({
+      kind: 'subtitles',
+      label: file.name,
+      srclang: 'en',
+      src: fileURL,
+      default: true
+    }, true);
+  }
+}
 const player = new Plyr('#player', {
   controls: [
     'play-large',
@@ -138,7 +170,12 @@ const player = new Plyr('#player', {
     'settings',
     'fullscreen'
   ],
-  settings: ['speed', 'quality']
+  settings: ['speed', 'quality', 'captions'],
+  captions: {
+    active: true,
+    update: true,
+    language: 'en'
+  }
 });
 
 function loadVideo() {
