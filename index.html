@@ -167,6 +167,7 @@ const player = new Plyr('#player', {
     'duration',
     'mute',
     'volume',
+    'captions',
     'settings',
     'fullscreen'
   ],
@@ -185,14 +186,10 @@ function loadVideo() {
 
   player.source = {
     type: 'video',
-    sources: [
-      {
-        src: url,
-        type: 'video/mp4' // browser will try anyway
-      }
-    ]
+    sources: [{ src: url, type: 'video/mp4' }],
+    // THIS is required for Plyr UI to show captions menu
+    tracks: []
   };
-
   document.getElementById("title").innerText = url.split('/').pop();
 }
 </script>
