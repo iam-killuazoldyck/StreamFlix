@@ -562,7 +562,6 @@ async function applySubtitleOffset() {
 /* ── CORS-fallback fetch for subtitle URLs ── */
 async function fetchSubText(url) {
   const attempts = [
-    () => fetch(url),
     () => fetch(`https://proxy.corsfix.com/?${url}`),
     () => fetch(`https://crossorigin.me/${encodeURIComponent(url)}`),
     () => fetch(`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`),
