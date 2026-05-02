@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
 
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -45,7 +44,7 @@ header {
 .header-badge { font-size:11px; font-weight:500; letter-spacing:1px; color:var(--muted); text-transform:uppercase; background:var(--surface2); padding:4px 10px; border-radius:20px; border:1px solid var(--border); }
 
 /* MAIN */
-main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw,30px); display:flex; flex-direction:column; gap:clamp(14px,3vw,22px); }
+main { max-width:75%; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw,30px); display:flex; flex-direction:column; gap:clamp(14px,3vw,22px); }
 
 /* INPUT CARDS */
 .input-section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:clamp(14px,3vw,22px); display:flex; flex-direction:column; gap:12px; }
@@ -68,13 +67,7 @@ main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,
 /* PLAYER CARD */
 .player-card { background:#000; border-radius:var(--radius); overflow:hidden; border:1px solid var(--border); box-shadow:0 8px 40px rgba(0,0,0,.6); }
 .player-wrapper { position:relative; width:100%; aspect-ratio:16/9; background:#000; cursor:pointer; user-select:none; -webkit-user-select:none; }
-.player-wrapper .plyr, .player-wrapper video { position:absolute; inset:0; width:100%; height:100%; }
-.player-wrapper video { object-fit:contain; }
-
-/* Kill Plyr's own UI */
-.plyr--video { --plyr-color-main:#e50914; }
-.plyr__controls { display:none !important; }
-.plyr__control--overlaid { display:none !important; }
+.player-wrapper video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
 
 /* EMPTY OVERLAY */
 .empty-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--muted); pointer-events:none; transition:opacity .3s; }
@@ -82,9 +75,7 @@ main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,
 .empty-overlay p { font-size:14px; opacity:.5; }
 .empty-overlay.hidden { opacity:0; }
 
-/* ============================================================
-   CUSTOM 2-ROW CONTROL BAR
-   ============================================================ */
+/* CUSTOM 2-ROW CONTROL BAR */
 .custom-controls {
   position:absolute; bottom:0; left:0; right:0; z-index:10;
   padding:0 clamp(8px,2.5vw,16px) clamp(8px,2vw,12px);
@@ -94,9 +85,8 @@ main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,
 .player-wrapper:hover .custom-controls,
 .player-wrapper.show-controls .custom-controls { opacity:1; pointer-events:all; }
 
-/* --- Row 1: scrubber --- */
+/* Row 1: scrubber */
 .ctrl-progress { width:100%; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
-
 .progress-wrap {
   flex:1; height:4px; background:rgba(255,255,255,.25);
   border-radius:2px; cursor:pointer; position:relative;
@@ -112,13 +102,11 @@ main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,
 }
 .progress-wrap:hover .progress-thumb,
 .progress-wrap.drag .progress-thumb { transform:translateY(-50%) translateX(-50%) scale(1); }
-
 .ctrl-time { font-size:clamp(11px,2.8vw,13px); color:rgba(255,255,255,.85); white-space:nowrap; font-variant-numeric:tabular-nums; user-select:none; }
 
-/* --- Row 2: buttons --- */
+/* Row 2: buttons */
 .ctrl-row { display:flex; align-items:center; justify-content:space-between; }
 .ctrl-left, .ctrl-right { display:flex; align-items:center; gap:2px; }
-
 .ctrl-btn {
   background:none; border:none; color:rgba(255,255,255,.88); cursor:pointer;
   padding:clamp(5px,1.8vw,8px); border-radius:6px;
@@ -130,7 +118,7 @@ main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,
 .ctrl-btn:active { background:rgba(255,255,255,.22); }
 .ctrl-btn svg { width:clamp(18px,4.5vw,22px); height:clamp(18px,4.5vw,22px); display:block; }
 
-/* Volume group */
+/* Volume */
 .vol-group { display:flex; align-items:center; }
 .vol-slider-wrap { width:0; overflow:hidden; transition:width .2s; display:flex; align-items:center; }
 .vol-group:hover .vol-slider-wrap,
@@ -139,16 +127,17 @@ main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,
 .vol-slider::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; background:#fff; border-radius:50%; cursor:pointer; }
 .vol-slider::-moz-range-thumb { width:12px; height:12px; background:#fff; border:none; border-radius:50%; }
 
-/* Speed badge */
+/* Speed */
 .speed-badge { font-size:12px; font-weight:600; color:rgba(255,255,255,.75); padding:4px 8px; border-radius:5px; cursor:pointer; border:1px solid rgba(255,255,255,.22); background:none; font-family:'DM Sans',sans-serif; transition:background .15s,color .15s; -webkit-tap-highlight-color:transparent; }
 .speed-badge:hover { background:rgba(255,255,255,.12); color:#fff; }
-
-/* Speed menu */
 .speed-menu { position:absolute; bottom:70px; right:clamp(8px,2.5vw,16px); background:rgba(14,14,14,.97); border:1px solid rgba(255,255,255,.1); border-radius:8px; overflow:hidden; display:none; flex-direction:column; z-index:20; min-width:80px; box-shadow:0 4px 20px rgba(0,0,0,.65); }
 .speed-menu.open { display:flex; }
 .speed-opt { padding:9px 16px; font-size:13px; color:rgba(255,255,255,.72); cursor:pointer; text-align:center; transition:background .1s; }
 .speed-opt:hover { background:rgba(255,255,255,.08); color:#fff; }
 .speed-opt.active { color:var(--red); font-weight:600; }
+
+/* Captions active state */
+.ctrl-btn.captions-on { color: var(--red); }
 
 /* Skip flash */
 .skip-flash { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,.6); color:#fff; font-size:13px; padding:8px 16px; border-radius:20px; pointer-events:none; opacity:0; transition:opacity .25s; z-index:15; }
@@ -177,7 +166,7 @@ main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,
   .file-label { justify-content:center; }
   .tips { grid-template-columns:1fr; }
   .meta-title { max-width:60vw; }
-  .vol-slider-wrap { width:44px !important; } /* always visible on mobile */
+  .vol-slider-wrap { width:44px !important; }
 }
 @media (max-width:360px) { .input-section { padding:12px; } .btn { padding:10px 14px; } }
 </style>
@@ -224,16 +213,15 @@ main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,
   <!-- PLAYER -->
   <div class="player-card">
     <div class="player-wrapper" id="playerWrapper">
-      <video id="player" playsinline></video>
+      <video id="player" playsinline crossorigin="anonymous"></video>
 
       <div class="empty-overlay" id="emptyOverlay">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.87v6.26a1 1 0 0 1-1.447.94L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
         <p>Paste a URL above and hit Play</p>
       </div>
 
-      <!-- ════ CUSTOM CONTROLS ════ -->
+      <!-- CUSTOM CONTROLS -->
       <div class="custom-controls" id="customControls">
-
         <!-- Row 1: scrubber + time -->
         <div class="ctrl-progress">
           <div class="progress-wrap" id="progressWrap">
@@ -295,10 +283,10 @@ main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,
           <div class="speed-opt" data-speed="1.5">1.5×</div>
           <div class="speed-opt" data-speed="2">2×</div>
         </div>
-      </div><!-- /custom-controls -->
+      </div>
 
       <div class="skip-flash" id="skipFlash"></div>
-    </div><!-- /player-wrapper -->
+    </div>
 
     <div class="meta">
       <div class="meta-title" id="metaTitle">No video loaded</div>
@@ -315,23 +303,21 @@ main { max-width:1080px; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,
 </main>
 
 <div id="toast"></div>
-<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
-<script>
-const videoEl  = document.getElementById('player');
-const wrapper  = document.getElementById('playerWrapper');
-const overlay  = document.getElementById('emptyOverlay');
 
-/* Init Plyr with no built-in controls */
-const plyrInst = new Plyr(videoEl, {
-  controls: [], clickToPlay: false,
-  keyboard: { focused: false, global: false },
-  captions: { active: true, update: true, language: 'en' }
-});
+<!-- hls.js for m3u8 support -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+
+<script>
+const videoEl = document.getElementById('player');
+const wrapper = document.getElementById('playerWrapper');
+const overlay = document.getElementById('emptyOverlay');
+let hlsInstance = null;
+let captionsVisible = false;
 
 /* ── HELPERS ── */
 function fmt(s) {
   if (!s || isNaN(s)) return '0:00';
-  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = Math.floor(s%60);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = Math.floor(s % 60);
   return h ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`;
 }
 function toast(msg) {
@@ -353,23 +339,35 @@ wrapper.addEventListener('mousemove', showCtrl);
 let lastTap = 0;
 wrapper.addEventListener('touchstart', () => {
   const now = Date.now();
-  if (now - lastTap < 300) { togglePlay(); }  // double-tap = play/pause
+  if (now - lastTap < 300) { togglePlay(); }
   else { wrapper.classList.contains('show-controls') ? wrapper.classList.remove('show-controls') : showCtrl(); }
   lastTap = now;
 }, { passive: true });
 
 /* ── PLAY / PAUSE ── */
-function togglePlay() { videoEl.paused ? videoEl.play() : videoEl.pause(); }
+function togglePlay() {
+  if (videoEl.paused) videoEl.play().catch(e => toast('⚠️ Playback blocked: ' + e.message));
+  else videoEl.pause();
+}
 wrapper.addEventListener('click', e => { if (!e.target.closest('.custom-controls')) togglePlay(); });
 document.getElementById('btnPlay').addEventListener('click', e => { e.stopPropagation(); togglePlay(); });
-videoEl.addEventListener('play',  () => { document.getElementById('iconPlay').style.display='none'; document.getElementById('iconPause').style.display=''; showCtrl(); });
-videoEl.addEventListener('pause', () => { document.getElementById('iconPlay').style.display=''; document.getElementById('iconPause').style.display='none'; wrapper.classList.add('show-controls'); clearTimeout(hideT); });
+
+videoEl.addEventListener('play', () => {
+  document.getElementById('iconPlay').style.display = 'none';
+  document.getElementById('iconPause').style.display = '';
+  showCtrl();
+});
+videoEl.addEventListener('pause', () => {
+  document.getElementById('iconPlay').style.display = '';
+  document.getElementById('iconPause').style.display = 'none';
+  wrapper.classList.add('show-controls'); clearTimeout(hideT);
+});
 
 /* ── SCRUBBER ── */
-const progressWrap = document.getElementById('progressWrap');
-const progressFill = document.getElementById('progressFill');
+const progressWrap  = document.getElementById('progressWrap');
+const progressFill  = document.getElementById('progressFill');
 const progressThumb = document.getElementById('progressThumb');
-const ctrlTime = document.getElementById('ctrlTime');
+const ctrlTime      = document.getElementById('ctrlTime');
 
 videoEl.addEventListener('timeupdate', () => {
   if (!videoEl.duration) return;
@@ -394,7 +392,7 @@ document.addEventListener('touchend', () => { scrubbing = false; progressWrap.cl
 
 /* ── SKIP ── */
 document.getElementById('btnRew').addEventListener('click', e => { e.stopPropagation(); videoEl.currentTime = Math.max(0, videoEl.currentTime - 10); flash('⏮ −10s'); });
-document.getElementById('btnFwd').addEventListener('click', e => { e.stopPropagation(); videoEl.currentTime = Math.min(videoEl.duration||0, videoEl.currentTime + 10); flash('+10s ⏭'); });
+document.getElementById('btnFwd').addEventListener('click', e => { e.stopPropagation(); videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 10); flash('+10s ⏭'); });
 
 /* ── VOLUME ── */
 const volSlider = document.getElementById('volSlider');
@@ -423,14 +421,25 @@ document.querySelectorAll('.speed-opt').forEach(opt => {
 });
 document.addEventListener('click', e => { if (!e.target.closest('#speedMenu,#btnSpeed')) speedMenu.classList.remove('open'); });
 
-/* ── CAPTIONS ── */
-document.getElementById('btnCaptions').addEventListener('click', e => { e.stopPropagation(); try { plyrInst.toggleCaptions(); } catch(_){} });
+/* ── CAPTIONS (native TextTrack) ── */
+const btnCaptions = document.getElementById('btnCaptions');
+btnCaptions.addEventListener('click', e => {
+  e.stopPropagation();
+  captionsVisible = !captionsVisible;
+  for (const track of videoEl.textTracks) {
+    track.mode = captionsVisible ? 'showing' : 'hidden';
+  }
+  btnCaptions.classList.toggle('captions-on', captionsVisible);
+});
 
 /* ── FULLSCREEN ── */
 document.getElementById('btnFs').addEventListener('click', e => {
   e.stopPropagation();
-  if (!document.fullscreenElement) { (wrapper.requestFullscreen || wrapper.webkitRequestFullscreen).call(wrapper); }
-  else { (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+  if (!document.fullscreenElement) {
+    (wrapper.requestFullscreen || wrapper.webkitRequestFullscreen).call(wrapper);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  }
 });
 document.addEventListener('fullscreenchange', () => {
   const fs = !!document.fullscreenElement;
@@ -440,51 +449,98 @@ document.addEventListener('fullscreenchange', () => {
 
 /* ── SUBTITLES ── */
 function srtToVtt(s) {
-  return "WEBVTT\n\n" + s.replace(/\r+/g,'').replace(/(\d+)\n(\d{2}:\d{2}:\d{2}),(\d{3}) --> (\d{2}:\d{2}:\d{2}),(\d{3})/g,(_,i,h1,ms1,h2,ms2)=>`${i}\n${h1}.${ms1} --> ${h2}.${ms2}`);
+  return "WEBVTT\n\n" + s.replace(/\r+/g, '').replace(
+    /(\d+)\n(\d{2}:\d{2}:\d{2}),(\d{3}) --> (\d{2}:\d{2}:\d{2}),(\d{3})/g,
+    (_, i, h1, ms1, h2, ms2) => `${i}\n${h1}.${ms1} --> ${h2}.${ms2}`
+  );
 }
 function clearTracks() { videoEl.querySelectorAll('track').forEach(t => t.remove()); }
 
 async function addSubtitle() {
-  const url = document.getElementById('subUrl').value.trim();
+  const url  = document.getElementById('subUrl').value.trim();
   const file = document.getElementById('subFile').files[0];
   clearTracks();
   let vttBlob;
   try {
-    if (url) { let t = await (await fetch(url)).text(); if (url.endsWith('.srt')) t = srtToVtt(t); vttBlob = new Blob([t],{type:'text/vtt'}); }
-    if (file) { let t = await file.text(); if (file.name.endsWith('.srt')) t = srtToVtt(t); vttBlob = new Blob([t],{type:'text/vtt'}); }
+    if (url)  { let t = await (await fetch(url)).text(); if (url.endsWith('.srt')) t = srtToVtt(t); vttBlob = new Blob([t], { type: 'text/vtt' }); }
+    if (file) { let t = await file.text(); if (file.name.endsWith('.srt')) t = srtToVtt(t); vttBlob = new Blob([t], { type: 'text/vtt' }); }
   } catch { toast('⚠️ Could not load subtitle'); return; }
   if (!vttBlob) { toast('Paste a URL or pick a file first'); return; }
+
   const track = document.createElement('track');
   track.kind = 'subtitles'; track.label = 'Subtitle'; track.srclang = 'en';
   track.src = URL.createObjectURL(vttBlob); track.default = true;
   videoEl.appendChild(track);
-  try { plyrInst.captions.update(); } catch(_) {}
+
+  // Apply current visibility state
+  track.addEventListener('load', () => {
+    track.track.mode = captionsVisible ? 'showing' : 'hidden';
+  });
+  captionsVisible = true;
+  btnCaptions.classList.add('captions-on');
   toast('✓ Subtitles loaded');
 }
 
-/* ── LOAD VIDEO ── */
+/* ── LOAD VIDEO (fixed) ── */
 function loadVideo() {
   const url = document.getElementById('url').value.trim();
   if (!url) { toast('Paste a video URL first'); return; }
+
+  // Tear down any existing HLS instance
+  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+
   clearTracks();
-  plyrInst.source = { type: 'video', sources: [{ src: url }] };
+  captionsVisible = false;
+  btnCaptions.classList.remove('captions-on');
+
+  const isHLS = url.includes('.m3u8') || url.includes('m3u8');
+
+  if (isHLS && Hls.isSupported()) {
+    // HLS via hls.js
+    hlsInstance = new Hls({ enableWorker: true });
+    hlsInstance.loadSource(url);
+    hlsInstance.attachMedia(videoEl);
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+      videoEl.play().catch(() => {});
+    });
+    hlsInstance.on(Hls.Events.ERROR, (_, data) => {
+      if (data.fatal) toast('⚠️ Stream error: ' + data.type);
+    });
+  } else if (isHLS && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+    // Native HLS (Safari)
+    videoEl.src = url;
+    videoEl.load();
+    videoEl.play().catch(() => {});
+  } else {
+    // Regular MP4 / WebM / OGG — set src directly on native element
+    videoEl.src = url;
+    videoEl.load();
+    videoEl.play().catch(() => {});
+  }
+
+  // Update meta
   try {
-    document.getElementById('metaTitle').textContent = decodeURIComponent(url.split('/').pop().split('?')[0]) || 'Video';
+    document.getElementById('metaTitle').textContent =
+      decodeURIComponent(url.split('/').pop().split('?')[0]) || 'Video';
     document.getElementById('metaSub').textContent = new URL(url).hostname;
-  } catch(_) {}
+  } catch (_) {
+    document.getElementById('metaTitle').textContent = 'Video';
+    document.getElementById('metaSub').textContent = url;
+  }
+
   overlay.classList.add('hidden');
   toast('▶ Loading…');
 }
 
-/* File label */
-document.getElementById('subFile').addEventListener('change', function() {
+/* ── FILE LABEL ── */
+document.getElementById('subFile').addEventListener('change', function () {
   const n = this.files[0]?.name;
-  document.getElementById('fileLabel').textContent = n ? (n.length>18?n.slice(0,16)+'…':n) : 'Upload file';
+  document.getElementById('fileLabel').textContent = n ? (n.length > 18 ? n.slice(0, 16) + '…' : n) : 'Upload file';
 });
 
-/* Enter key shortcuts */
-document.getElementById('url').addEventListener('keydown', e => { if (e.key==='Enter') loadVideo(); });
-document.getElementById('subUrl').addEventListener('keydown', e => { if (e.key==='Enter') addSubtitle(); });
+/* ── KEYBOARD SHORTCUTS ── */
+document.getElementById('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadVideo(); });
+document.getElementById('subUrl').addEventListener('keydown', e => { if (e.key === 'Enter') addSubtitle(); });
 </script>
 </body>
 </html>
