@@ -513,16 +513,15 @@ function parseVtt(raw) {
 }
 
 /* ── Inject cues via addTextTrack (no crossorigin needed) ── */
+let lastCues = [];
+/* ── Inject cues with time clamping ── */
 function loadCuesIntoTrack(cues) {
   const track = videoEl.addTextTrack('subtitles', 'Subtitle', 'en');
   for (const { start, end, text } of cues) {
-    try {
-      track.addCue(new VTTCue(
-        start + subtitleOffset,
-        end + subtitleOffset, 
-        text
-      )); 
-    } catch (_) {}
+    // Clamp start to 0, end must be > start
+    const s = Math.max(0, start + subtitleOffset);
+    const e = Math.max(s + 0.001, end + subtitleOffset);
+    try { track.addCue(new VTTCue(s, e, text)); } catch (_) {}
   }
   track.mode = 'showing';
   programmaticTrack = track;
@@ -530,27 +529,32 @@ function loadCuesIntoTrack(cues) {
   btnCaptions.classList.add('captions-on');
   toast('✓ Subtitles loaded');
 }
-let lastCues = [];
 
-function applySubtitleOffset() {
+async function applySubtitleOffset() {
   if (!lastCues.length) return;
 
   clearTracks();
 
   const track = videoEl.addTextTrack('subtitles', 'Subtitle', 'en');
-
   for (const { start, end, text } of lastCues) {
-    try {
-      track.addCue(new VTTCue(
-        start + subtitleOffset,
-        end + subtitleOffset,
-        text
-      ));
-    } catch (_) {}
+    const s = Math.max(0, start + subtitleOffset);
+    const e = Math.max(s + 0.001, end + subtitleOffset);
+    try { track.addCue(new VTTCue(s, e, text)); } catch (_) {}
   }
 
   track.mode = captionsVisible ? 'showing' : 'hidden';
   programmaticTrack = track;
+
+  // Force the browser to re‑evaluate active cues now
+  const currentTime = videoEl.currentTime;
+  // Briefly hide and re‑show the track to trigger a full sync
+  track.mode = 'hidden';
+  // Using a 0ms timeout pushes the mode change to the next event loop
+  setTimeout(() => {
+    track.mode = captionsVisible ? 'showing' : 'hidden';
+    // Optional: tiny seek to ensure cue change fires
+    videoEl.currentTime = currentTime;
+  }, 0);
 
   toast(`⏱ Subtitle offset: ${subtitleOffset > 0 ? '+' : ''}${subtitleOffset.toFixed(1)}s`);
 }
