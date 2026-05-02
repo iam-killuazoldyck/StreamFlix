@@ -128,35 +128,9 @@ header {
 <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
 
 <script>
-function addSubtitle() {
-  const url = document.getElementById('subUrl').value;
-  const file = document.getElementById('subFile').files[0];
+const video = document.getElementById('player');
 
-  // URL subtitles
-  if (url) {
-    player.addTrack({
-      kind: 'subtitles',
-      label: 'External Subtitle',
-      srclang: 'en',
-      src: url,
-      default: true
-    }, true);
-  }
-
-  // File upload subtitles
-  if (file) {
-    const fileURL = URL.createObjectURL(file);
-
-    player.addTrack({
-      kind: 'subtitles',
-      label: file.name,
-      srclang: 'en',
-      src: fileURL,
-      default: true
-    }, true);
-  }
-}
-const player = new Plyr('#player', {
+const player = new Plyr(video, {
   controls: [
     'play-large',
     'rewind',
@@ -179,17 +153,86 @@ const player = new Plyr('#player', {
   }
 });
 
+// 🔥 Convert SRT → VTT
+function srtToVtt(srt) {
+  return "WEBVTT\n\n" + srt
+    .replace(/\r+/g, '')
+    .replace(/(\d+)\n(\d{2}:\d{2}:\d{2}),(\d{3}) --> (\d{2}:\d{2}:\d{2}),(\d{3})/g,
+      (_, i, h1, ms1, h2, ms2) => {
+        return `${i}\n${h1}.${ms1} --> ${h2}.${ms2}`;
+      });
+}
+
+// 🔥 Remove existing subtitle tracks
+function clearTracks() {
+  const tracks = video.querySelectorAll('track');
+  tracks.forEach(t => t.remove());
+}
+
+// 🔥 Add subtitle
+async function addSubtitle() {
+  const url = document.getElementById('subUrl').value;
+  const file = document.getElementById('subFile').files[0];
+
+  clearTracks();
+
+  let vttBlob;
+
+  // ✅ URL input
+  if (url) {
+    const res = await fetch(url);
+    let text = await res.text();
+
+    if (url.endsWith('.srt')) {
+      text = srtToVtt(text);
+    }
+
+    vttBlob = new Blob([text], { type: 'text/vtt' });
+  }
+
+  // ✅ File upload
+  if (file) {
+    let text = await file.text();
+
+    if (file.name.endsWith('.srt')) {
+      text = srtToVtt(text);
+    }
+
+    vttBlob = new Blob([text], { type: 'text/vtt' });
+  }
+
+  if (!vttBlob) return;
+
+  const trackURL = URL.createObjectURL(vttBlob);
+
+  const track = document.createElement('track');
+  track.kind = 'subtitles';
+  track.label = 'Subtitle';
+  track.srclang = 'en';
+  track.src = trackURL;
+  track.default = true;
+
+  video.appendChild(track);
+
+  // 🔥 Important: force Plyr to re-detect tracks
+  player.captions.update();
+}
+
+// 🔥 Load video
 function loadVideo() {
   const url = document.getElementById('url').value;
-
   if (!url) return;
+
+  clearTracks();
+
+  video.src = url;
+  video.type = 'video/mp4'; // browser will still try best guess
 
   player.source = {
     type: 'video',
-    sources: [{ src: url, type: 'video/mp4' }],
-    // THIS is required for Plyr UI to show captions menu
-    tracks: []
+    sources: [{ src: url }]
   };
+
   document.getElementById("title").innerText = url.split('/').pop();
 }
 </script>
