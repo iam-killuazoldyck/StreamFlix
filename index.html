@@ -456,26 +456,59 @@ function srtToVtt(s) {
 }
 function clearTracks() { videoEl.querySelectorAll('track').forEach(t => t.remove()); }
 
+async function fetchSubText(url) {
+  const attempts = [
+    () => fetch(url),                                                                           // 1. direct
+    () => fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`),                           // 2. corsproxy.io
+    () => fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`),              // 3. allorigins
+    () => fetch(`https://thingproxy.freeboard.io/fetch/${url}`),                               // 4. thingproxy
+  ];
+  for (const attempt of attempts) {
+    try {
+      const res = await attempt();
+      if (res.ok) return await res.text();
+    } catch (_) {}
+  }
+  throw new Error('All proxies failed');
+}
+
 async function addSubtitle() {
   const url  = document.getElementById('subUrl').value.trim();
   const file = document.getElementById('subFile').files[0];
   clearTracks();
   let vttBlob;
   try {
-    if (url)  { let t = await (await fetch(url)).text(); if (url.endsWith('.srt')) t = srtToVtt(t); vttBlob = new Blob([t], { type: 'text/vtt' }); }
-    if (file) { let t = await file.text(); if (file.name.endsWith('.srt')) t = srtToVtt(t); vttBlob = new Blob([t], { type: 'text/vtt' }); }
-  } catch { toast('⚠️ Could not load subtitle'); return; }
+    if (url) {
+      let t = await fetchSubText(url);
+      if (url.endsWith('.srt')) t = srtToVtt(t);
+      vttBlob = new Blob([t], { type: 'text/vtt' });
+    }
+    if (file) {
+      let t = await file.text();
+      if (file.name.endsWith('.srt')) t = srtToVtt(t);
+      vttBlob = new Blob([t], { type: 'text/vtt' });
+    }
+  } catch { toast('⚠️ Subtitle blocked by CORS — try uploading the file directly'); return; }
   if (!vttBlob) { toast('Paste a URL or pick a file first'); return; }
+
+  // crossorigin is required for external track blobs to render —
+  // set it only now so video-only streams are never affected
+  if (!videoEl.hasAttribute('crossorigin')) {
+    videoEl.setAttribute('crossorigin', 'anonymous');
+    // Re-attach current src so the attribute takes effect without reloading HLS
+    if (!hlsInstance && videoEl.src) {
+      const t = videoEl.currentTime;
+      videoEl.load();
+      videoEl.currentTime = t;
+    }
+  }
 
   const track = document.createElement('track');
   track.kind = 'subtitles'; track.label = 'Subtitle'; track.srclang = 'en';
   track.src = URL.createObjectURL(vttBlob); track.default = true;
   videoEl.appendChild(track);
 
-  // Apply current visibility state
-  track.addEventListener('load', () => {
-    track.track.mode = captionsVisible ? 'showing' : 'hidden';
-  });
+  track.addEventListener('load', () => { track.track.mode = 'showing'; });
   captionsVisible = true;
   btnCaptions.classList.add('captions-on');
   toast('✓ Subtitles loaded');
