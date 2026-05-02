@@ -20,8 +20,6 @@
   --text: #f0f0f0;
   --muted: #888;
   --radius: 10px;
-  --pane-w: 340px;
-  --pane-collapse-w: 36px;
 }
 
 html { scroll-behavior: smooth; }
@@ -48,113 +46,88 @@ header {
 
 /* ── LAYOUT SHELL ── */
 .layout {
-  display: flex;
-  align-items: flex-start;
-  min-height: calc(100dvh - 64px);
   position: relative;
 }
 
-/* ── SUBTITLE SYNC PANE ── */
+/* ── SUBTITLE SYNC PANE (horizontal accordion below player) ── */
 .sync-pane {
-  position: sticky;
-  top: 64px;
-  height: calc(100dvh - 64px);
-  width: var(--pane-w);
-  min-width: var(--pane-w);
   background: var(--surface3);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   overflow: hidden;
-  z-index: 50;
-  flex-shrink: 0;
-}
-.sync-pane.collapsed {
-  width: var(--pane-collapse-w);
-  min-width: var(--pane-collapse-w);
 }
 
-/* Toggle tab */
+/* Toggle bar — full-width clickable header row */
 .pane-toggle {
-  position: absolute;
-  right: -1px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 56px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-left: none;
-  border-radius: 0 6px 6px 0;
-  cursor: pointer;
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 10;
-  transition: background .15s;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--surface2);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  gap: 10px;
 }
-.pane-toggle:hover { background: var(--surface); }
-.pane-toggle svg {
-  width: 10px; height: 10px;
+.pane-toggle:hover { background: rgba(255,255,255,.05); }
+.pane-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pane-toggle-left svg { width: 13px; height: 13px; flex-shrink: 0; }
+.pane-toggle:hover .pane-toggle-left { color: var(--text); }
+.pane-chevron {
+  width: 14px; height: 14px;
   color: var(--muted);
   transition: transform .3s cubic-bezier(.4,0,.2,1), color .15s;
   flex-shrink: 0;
 }
-.pane-toggle:hover svg { color: var(--text); }
-.sync-pane.collapsed .pane-toggle svg { transform: rotate(180deg); }
+.pane-toggle:hover .pane-chevron { color: var(--text); }
+.sync-pane.collapsed .pane-chevron { transform: rotate(-90deg); }
 
-/* Pane inner content */
+/* Pane body — collapsible region via grid trick */
 .pane-inner {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  opacity: 1;
-  transition: opacity .2s .1s;
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows .3s cubic-bezier(.4,0,.2,1);
   overflow: hidden;
 }
 .sync-pane.collapsed .pane-inner {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .1s;
+  grid-template-rows: 0fr;
+}
+.pane-inner-wrap {
+  overflow: hidden;
+  min-height: 0;
 }
 
-/* Collapsed label */
-.collapsed-label {
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: var(--pane-collapse-w);
+/* Pane body layout — two columns side by side */
+.pane-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.pane-col {
+  padding: 14px 16px;
+}
+.pane-col + .pane-col {
+  border-left: 1px solid var(--border);
+}
+/* Cue list column */
+.pane-col-cues {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .15s;
+  flex-direction: column;
+  max-height: 260px;
 }
-.sync-pane.collapsed .collapsed-label {
-  opacity: 1;
-  pointer-events: none;
-}
-.collapsed-label span {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
+/* Section label inside pane */
+.pane-section-label {
   font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-/* Pane header */
-.pane-head {
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.pane-head-title {
-  font-size: 11px;
   font-weight: 500;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -162,9 +135,8 @@ header {
   margin-bottom: 10px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
 }
-.pane-head-title svg { width: 13px; height: 13px; }
 
 /* Offset control */
 .offset-block {
@@ -262,23 +234,15 @@ header {
 .pane-btn-red { background: rgba(229,9,20,.12); color: var(--red); border-color: rgba(229,9,20,.3); }
 .pane-btn-red:hover { background: rgba(229,9,20,.22); }
 
-/* Divider */
-.pane-divider { height: 1px; background: var(--border); flex-shrink: 0; }
-
-/* Cue list */
+/* Cue list head */
 .pane-cue-head {
-  padding: 10px 16px 6px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 8px;
 }
-.pane-cue-head-label {
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-}
+
 .cue-count {
   font-size: 10px;
   color: var(--muted);
@@ -291,7 +255,6 @@ header {
 .cue-list {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 10px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -358,12 +321,9 @@ header {
 .cue-empty svg { width: 32px; height: 32px; opacity: .2; }
 .cue-empty p { font-size: 12px; color: var(--muted); line-height: 1.5; }
 
-/* Preview strip */
+/* Preview strip — inline inside controls column */
 .preview-strip {
-  flex-shrink: 0;
-  border-top: 1px solid var(--border);
-  padding: 10px 12px;
-  background: rgba(0,0,0,.3);
+  margin-top: 10px;
 }
 .preview-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
 .preview-box {
@@ -417,6 +377,9 @@ main {
 .player-wrapper { position:relative; width:100%; aspect-ratio:16/9; background:#000; cursor:pointer; user-select:none; -webkit-user-select:none; }
 .player-wrapper video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
 
+/* cursor hide when controls are hidden during playback */
+.player-wrapper.hide-cursor { cursor: none; }
+
 /* EMPTY OVERLAY */
 .empty-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--muted); pointer-events:none; transition:opacity .3s; }
 .empty-overlay svg { width:44px; height:44px; opacity:.35; }
@@ -425,7 +388,6 @@ main {
 
 /* CUSTOM 2-ROW CONTROL BAR */
 .custom-controls { position:absolute; bottom:0; left:0; right:0; z-index:10; padding:0 clamp(8px,2.5vw,16px) clamp(8px,2vw,12px); background:linear-gradient(transparent,rgba(0,0,0,.85) 55%); opacity:0; transition:opacity .25s; pointer-events:none; }
-.player-wrapper:hover .custom-controls,
 .player-wrapper.show-controls .custom-controls { opacity:1; pointer-events:all; }
 .ctrl-progress { width:100%; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
 .progress-wrap { flex:1; height:4px; background:rgba(255,255,255,.25); border-radius:2px; cursor:pointer; position:relative; transition:height .15s; }
@@ -458,6 +420,37 @@ main {
 .skip-flash { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,.6); color:#fff; font-size:13px; padding:8px 16px; border-radius:20px; pointer-events:none; opacity:0; transition:opacity .25s; z-index:15; }
 .skip-flash.show { opacity:1; }
 
+/* Keyboard shortcut hint overlay */
+.kb-hint {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(0,0,0,.72);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: rgba(255,255,255,.6);
+  line-height: 1.7;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .25s;
+  z-index: 12;
+  backdrop-filter: blur(6px);
+}
+.player-wrapper.show-controls .kb-hint { opacity: 1; }
+.kb-hint kbd {
+  display: inline-block;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 3px;
+  padding: 0px 4px;
+  font-size: 10px;
+  font-family: monospace;
+  color: #fff;
+  margin-right: 2px;
+}
+
 /* META */
 .meta { padding:clamp(12px,3vw,18px) clamp(14px,3vw,20px); border-top:1px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
 .meta-title { font-size:clamp(13px,3.5vw,17px); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:70vw; }
@@ -475,8 +468,10 @@ main {
 
 /* ── RESPONSIVE ── */
 @media (max-width:700px) {
-  :root { --pane-w: 280px; }
-  .sync-pane { position: fixed; left: 0; top: 0; bottom: 0; height: 100dvh; z-index: 200; top: 64px; height: calc(100dvh - 64px); }
+  .pane-body { grid-template-columns: 1fr; }
+  .pane-col + .pane-col { border-left: none; border-top: 1px solid var(--border); }
+  .pane-col-cues { max-height: 200px; }
+  .kb-hint { display: none; }
 }
 @media (max-width:480px) {
   .input-row { flex-direction:column; }
@@ -497,90 +492,6 @@ main {
 </header>
 
 <div class="layout">
-
-  <!-- ══ SUBTITLE SYNC PANE ══ -->
-  <div class="sync-pane" id="syncPane">
-    <button class="pane-toggle" id="paneToggle" title="Toggle subtitle pane">
-      <!-- left chevron -->
-      <svg viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="7,2 2,8 7,14"/>
-      </svg>
-    </button>
-
-    <!-- Collapsed pill label -->
-    <div class="collapsed-label"><span>Subtitle Sync</span></div>
-
-    <!-- Expanded content -->
-    <div class="pane-inner">
-
-      <!-- Head -->
-      <div class="pane-head">
-        <div class="pane-head-title">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 8H9.5v-.5h-2v3h2V14H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V14H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/></svg>
-          Subtitle Sync
-        </div>
-
-        <!-- Stamp row: video time vs sub time -->
-        <div class="stamp-row">
-          <div class="stamp-card">
-            <div class="stamp-card-label">▶ Video</div>
-            <div class="stamp-card-val" id="stampVideo">0:00.0</div>
-          </div>
-          <div class="stamp-card">
-            <div class="stamp-card-label">💬 Sub cue</div>
-            <div class="stamp-card-val" id="stampSub">—</div>
-          </div>
-        </div>
-
-        <!-- Offset control -->
-        <div class="offset-block">
-          <button class="offset-btn" id="offsetMinus" title="−0.5s">−</button>
-          <div style="flex:1;text-align:center">
-            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Offset</div>
-            <div class="offset-value" id="offsetDisplay">0.0 s</div>
-          </div>
-          <button class="offset-btn" id="offsetPlus" title="+0.5s">+</button>
-        </div>
-
-        <!-- Fine-tune slider (−5 to +5 s) -->
-        <div class="fine-row">
-          <div class="fine-label">Fine −5s</div>
-          <input type="range" class="fine-slider" id="fineSlider" min="-5" max="5" step="0.1" value="0">
-          <div class="fine-label">+5s</div>
-        </div>
-
-        <!-- Actions -->
-        <div class="pane-actions">
-          <button class="pane-btn pane-btn-ghost" id="btnAutoSync" title="Snap offset so next cue starts now">⚡ Snap to now</button>
-          <button class="pane-btn pane-btn-ghost" id="btnReset">↺ Reset</button>
-          <button class="pane-btn pane-btn-red" id="btnExportSrt">↓ SRT</button>
-        </div>
-      </div>
-
-      <div class="pane-divider"></div>
-
-      <!-- Cue list head -->
-      <div class="pane-cue-head">
-        <div class="pane-cue-head-label">Cue List</div>
-        <div class="cue-count" id="cueCount">0 cues</div>
-      </div>
-
-      <!-- Cue list -->
-      <div class="cue-list" id="cueList">
-        <div class="cue-empty" id="cueEmpty">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 3l-4 4-4-4"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
-          <p>Add subtitles to see<br>and sync cues here</p>
-        </div>
-      </div>
-
-      <!-- Live preview strip -->
-      <div class="preview-strip">
-        <div class="preview-label">Live Preview</div>
-        <div class="preview-box empty" id="previewBox">no subtitle active</div>
-      </div>
-
-    </div><!-- /pane-inner -->
-  </div><!-- /sync-pane -->
 
   <!-- ══ MAIN CONTENT ══ -->
   <main>
@@ -636,17 +547,17 @@ main {
           </div>
           <div class="ctrl-row">
             <div class="ctrl-left">
-              <button class="ctrl-btn" id="btnPlay" title="Play / Pause">
+              <button class="ctrl-btn" id="btnPlay" title="Play / Pause (Space)">
                 <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
               </button>
-              <button class="ctrl-btn" id="btnRew" title="−10s">
+              <button class="ctrl-btn" id="btnRew" title="−10s (←)">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M11.99 5V2l-5 5 5 5V8c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
                   <text x="12" y="15" text-anchor="middle" font-size="5.5" font-family="sans-serif" fill="currentColor">10</text>
                 </svg>
               </button>
-              <button class="ctrl-btn" id="btnFwd" title="+10s">
+              <button class="ctrl-btn" id="btnFwd" title="+10s (→)">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 5V2l5 5-5 5V8c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/>
                   <text x="12" y="15" text-anchor="middle" font-size="5.5" font-family="sans-serif" fill="currentColor">10</text>
@@ -664,10 +575,10 @@ main {
             </div>
             <div class="ctrl-right">
               <button class="speed-badge" id="btnSpeed">1×</button>
-              <button class="ctrl-btn" id="btnCaptions" title="Captions">
+              <button class="ctrl-btn" id="btnCaptions" title="Captions (C)">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 8H9.5v-.5h-2v3h2V14H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V14H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/></svg>
               </button>
-              <button class="ctrl-btn" id="btnFs" title="Fullscreen">
+              <button class="ctrl-btn" id="btnFs" title="Fullscreen (F)">
                 <svg id="iconFs" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
                 <svg id="iconExit" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
               </button>
@@ -684,6 +595,15 @@ main {
           </div>
         </div>
 
+        <!-- Keyboard shortcut hint (shown with controls) -->
+        <div class="kb-hint">
+          <kbd>Space</kbd> Play/Pause &nbsp;
+          <kbd>←</kbd><kbd>→</kbd> ±10s &nbsp;
+          <kbd>F</kbd> Fullscreen &nbsp;
+          <kbd>C</kbd> Captions &nbsp;
+          <kbd>[</kbd><kbd>]</kbd> Sub sync
+        </div>
+
         <div class="skip-flash" id="skipFlash"></div>
       </div>
 
@@ -693,12 +613,100 @@ main {
       </div>
     </div>
 
+    <!-- SUBTITLE SYNC PANE (accordion, below player) -->
+    <div class="sync-pane" id="syncPane">
+
+      <!-- Toggle bar -->
+      <button class="pane-toggle" id="paneToggle">
+        <div class="pane-toggle-left">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 8H9.5v-.5h-2v3h2V14H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V14H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/></svg>
+          Subtitle Sync
+        </div>
+        <!-- Down chevron -->
+        <svg class="pane-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      <!-- Collapsible body -->
+      <div class="pane-inner">
+        <div class="pane-inner-wrap">
+          <div class="pane-body">
+
+            <!-- LEFT COLUMN: controls -->
+            <div class="pane-col">
+              <div class="pane-section-label">
+                <span>Sync Controls</span>
+              </div>
+
+              <!-- Stamp row -->
+              <div class="stamp-row">
+                <div class="stamp-card">
+                  <div class="stamp-card-label">▶ Video</div>
+                  <div class="stamp-card-val" id="stampVideo">0:00.0</div>
+                </div>
+                <div class="stamp-card">
+                  <div class="stamp-card-label">💬 Sub cue</div>
+                  <div class="stamp-card-val" id="stampSub">—</div>
+                </div>
+              </div>
+
+              <!-- Offset control -->
+              <div class="offset-block">
+                <button class="offset-btn" id="offsetMinus" title="−0.5s">−</button>
+                <div style="flex:1;text-align:center">
+                  <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Offset</div>
+                  <div class="offset-value" id="offsetDisplay">0.0 s</div>
+                </div>
+                <button class="offset-btn" id="offsetPlus" title="+0.5s">+</button>
+              </div>
+
+              <!-- Fine slider -->
+              <div class="fine-row">
+                <div class="fine-label">Fine −5s</div>
+                <input type="range" class="fine-slider" id="fineSlider" min="-5" max="5" step="0.1" value="0">
+                <div class="fine-label">+5s</div>
+              </div>
+
+              <!-- Actions -->
+              <div class="pane-actions">
+                <button class="pane-btn pane-btn-ghost" id="btnAutoSync">⚡ Snap to now</button>
+                <button class="pane-btn pane-btn-ghost" id="btnReset">↺ Reset</button>
+                <button class="pane-btn pane-btn-red" id="btnExportSrt">↓ SRT</button>
+              </div>
+
+              <!-- Live preview -->
+              <div class="preview-strip">
+                <div class="preview-label">Live Preview</div>
+                <div class="preview-box empty" id="previewBox">no subtitle active</div>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: cue list -->
+            <div class="pane-col pane-col-cues">
+              <div class="pane-cue-head">
+                <div class="pane-section-label" style="margin-bottom:0">Cue List</div>
+                <div class="cue-count" id="cueCount">0 cues</div>
+              </div>
+              <div class="cue-list" id="cueList">
+                <div class="cue-empty" id="cueEmpty">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 3l-4 4-4-4"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
+                  <p>Add subtitles to see<br>and sync cues here</p>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /pane-body -->
+        </div><!-- /pane-inner-wrap -->
+      </div><!-- /pane-inner -->
+    </div><!-- /sync-pane -->
+
     <!-- TIPS -->
     <div class="tips">
       <div class="tip"><div class="tip-icon">🎬</div><div><strong>Supported formats</strong>MP4, WebM, OGG, HLS (m3u8)</div></div>
       <div class="tip"><div class="tip-icon">💬</div><div><strong>Subtitles</strong>Paste a .vtt/.srt URL or upload from device</div></div>
       <div class="tip"><div class="tip-icon">⚡</div><div><strong>Snap to now</strong>Auto-aligns next cue to current playhead</div></div>
-      <div class="tip"><div class="tip-icon">⌨️</div><div><strong>Keyboard</strong>[ / ] to shift subs ±0.5s</div></div>
+      <div class="tip"><div class="tip-icon">⌨️</div><div><strong>Keyboard</strong>Space play/pause · ←/→ ±10s · F fullscreen · C captions · [/] sub sync</div></div>
     </div>
   </main>
 
@@ -729,7 +737,6 @@ function fmtMs(s) {
     : `${m}:${String(sec).padStart(4,'0')}`;
 }
 function fmtSrtTime(s) {
-  // HH:MM:SS,mmm
   const h  = Math.floor(s / 3600);
   const m  = Math.floor((s % 3600) / 60);
   const sc = Math.floor(s % 60);
@@ -750,18 +757,58 @@ const syncPane   = document.getElementById('syncPane');
 const paneToggle = document.getElementById('paneToggle');
 paneToggle.addEventListener('click', () => syncPane.classList.toggle('collapsed'));
 
-/* ── AUTO-HIDE CONTROLS ── */
+/* ══════════════════════════════════════
+   AUTO-HIDE CONTROLS (3s idle timeout)
+   ══════════════════════════════════════ */
 let hideT;
+
 function showCtrl() {
-  wrapper.classList.add('show-controls'); clearTimeout(hideT);
-  if (!videoEl.paused) hideT = setTimeout(() => wrapper.classList.remove('show-controls'), 3000);
+  wrapper.classList.add('show-controls');
+  wrapper.classList.remove('hide-cursor');
+  clearTimeout(hideT);
+  // Only auto-hide when playing — keep visible while paused
+  if (!videoEl.paused) {
+    hideT = setTimeout(() => {
+      wrapper.classList.remove('show-controls');
+      // Also hide the cursor when controls disappear during playback
+      wrapper.classList.add('hide-cursor');
+    }, 3000);
+  }
 }
+
+function cancelHide() {
+  clearTimeout(hideT);
+  wrapper.classList.add('show-controls');
+  wrapper.classList.remove('hide-cursor');
+}
+
+// Show controls on any mouse activity inside the wrapper
 wrapper.addEventListener('mousemove', showCtrl);
+wrapper.addEventListener('mouseenter', showCtrl);
+wrapper.addEventListener('mouseleave', () => {
+  // When mouse leaves the player, start hide timer if playing
+  clearTimeout(hideT);
+  if (!videoEl.paused) {
+    hideT = setTimeout(() => {
+      wrapper.classList.remove('show-controls');
+      wrapper.classList.add('hide-cursor');
+    }, 3000);
+  }
+});
+
+// Touch: tap to toggle controls visibility
 let lastTap = 0;
 wrapper.addEventListener('touchstart', () => {
   const now = Date.now();
-  if (now - lastTap < 300) togglePlay();
-  else { wrapper.classList.contains('show-controls') ? wrapper.classList.remove('show-controls') : showCtrl(); }
+  if (now - lastTap < 300) {
+    togglePlay();
+  } else {
+    if (wrapper.classList.contains('show-controls')) {
+      wrapper.classList.remove('show-controls');
+    } else {
+      showCtrl();
+    }
+  }
   lastTap = now;
 }, { passive: true });
 
@@ -772,8 +819,18 @@ function togglePlay() {
 }
 wrapper.addEventListener('click', e => { if (!e.target.closest('.custom-controls')) togglePlay(); });
 document.getElementById('btnPlay').addEventListener('click', e => { e.stopPropagation(); togglePlay(); });
-videoEl.addEventListener('play',  () => { document.getElementById('iconPlay').style.display='none'; document.getElementById('iconPause').style.display=''; showCtrl(); });
-videoEl.addEventListener('pause', () => { document.getElementById('iconPlay').style.display=''; document.getElementById('iconPause').style.display='none'; wrapper.classList.add('show-controls'); clearTimeout(hideT); });
+
+videoEl.addEventListener('play', () => {
+  document.getElementById('iconPlay').style.display = 'none';
+  document.getElementById('iconPause').style.display = '';
+  showCtrl(); // shows controls briefly then auto-hides after 3s
+});
+videoEl.addEventListener('pause', () => {
+  document.getElementById('iconPlay').style.display = '';
+  document.getElementById('iconPause').style.display = 'none';
+  // Always show controls when paused, cancel any pending hide
+  cancelHide();
+});
 
 /* ── SCRUBBER ── */
 const progressWrap  = document.getElementById('progressWrap');
@@ -801,8 +858,10 @@ document.addEventListener('mouseup',    () => { scrubbing=false; progressWrap.cl
 document.addEventListener('touchend',   () => { scrubbing=false; progressWrap.classList.remove('drag'); });
 
 /* ── SKIP ── */
-document.getElementById('btnRew').addEventListener('click', e => { e.stopPropagation(); videoEl.currentTime=Math.max(0,videoEl.currentTime-10); flash('⏮ −10s'); });
-document.getElementById('btnFwd').addEventListener('click', e => { e.stopPropagation(); videoEl.currentTime=Math.min(videoEl.duration||0,videoEl.currentTime+10); flash('+10s ⏭'); });
+function skipBack() { videoEl.currentTime = Math.max(0, videoEl.currentTime - 10); flash('⏮ −10s'); showCtrl(); }
+function skipFwd()  { videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 10); flash('+10s ⏭'); showCtrl(); }
+document.getElementById('btnRew').addEventListener('click', e => { e.stopPropagation(); skipBack(); });
+document.getElementById('btnFwd').addEventListener('click', e => { e.stopPropagation(); skipFwd(); });
 
 /* ── VOLUME ── */
 const volSlider = document.getElementById('volSlider');
@@ -828,19 +887,20 @@ document.addEventListener('click', e => { if (!e.target.closest('#speedMenu,#btn
 
 /* ── CAPTIONS ── */
 const btnCaptions = document.getElementById('btnCaptions');
-btnCaptions.addEventListener('click', e => {
-  e.stopPropagation();
+function toggleCaptions() {
   captionsVisible = !captionsVisible;
   for (const track of videoEl.textTracks) track.mode = captionsVisible ? 'showing' : 'hidden';
   btnCaptions.classList.toggle('captions-on', captionsVisible);
-});
+  flash(captionsVisible ? '💬 Captions on' : '💬 Captions off');
+}
+btnCaptions.addEventListener('click', e => { e.stopPropagation(); toggleCaptions(); });
 
 /* ── FULLSCREEN ── */
-document.getElementById('btnFs').addEventListener('click', e => {
-  e.stopPropagation();
+function toggleFullscreen() {
   if (!document.fullscreenElement) (wrapper.requestFullscreen||wrapper.webkitRequestFullscreen).call(wrapper);
   else (document.exitFullscreen||document.webkitExitFullscreen).call(document);
-});
+}
+document.getElementById('btnFs').addEventListener('click', e => { e.stopPropagation(); toggleFullscreen(); });
 document.addEventListener('fullscreenchange', () => {
   const fs = !!document.fullscreenElement;
   document.getElementById('iconFs').style.display   = fs ? 'none' : '';
@@ -853,7 +913,7 @@ document.addEventListener('fullscreenchange', () => {
 
 let programmaticTrack = null;
 let subtitleOffset = 0;
-let lastCues = [];        // raw parsed cues [{start,end,text}]
+let lastCues = [];
 let activeCueIdx = -1;
 
 function clearTracks() {
@@ -931,7 +991,6 @@ function updateFineSlider() {
   const slider = document.getElementById('fineSlider');
   const clamped = Math.max(-5, Math.min(5, subtitleOffset));
   slider.value = clamped;
-  // update gradient
   const pct = ((clamped + 5) / 10) * 100;
   slider.style.background = `linear-gradient(to right, var(--red) ${pct}%, rgba(255,255,255,.2) ${pct}%)`;
 }
@@ -945,7 +1004,6 @@ function renderCueList() {
 
   if (!lastCues.length) {
     empty.style.display = 'flex';
-    // Remove all cue items
     list.querySelectorAll('.cue-item').forEach(el => el.remove());
     return;
   }
@@ -984,7 +1042,6 @@ function highlightActiveCue() {
     if (t >= s && t < e) { newIdx = i; break; }
   }
 
-  // Update preview
   const preview = document.getElementById('previewBox');
   if (newIdx !== -1) {
     preview.textContent = lastCues[newIdx].text.replace(/\n/,' ');
@@ -1002,7 +1059,6 @@ function highlightActiveCue() {
     el.classList.toggle('active', i === newIdx);
   });
 
-  // Scroll active cue into view
   if (newIdx !== -1) {
     const activeEl = list.querySelector(`.cue-item[data-idx="${newIdx}"]`);
     if (activeEl) activeEl.scrollIntoView({ block:'nearest', behavior:'smooth' });
@@ -1012,14 +1068,12 @@ function highlightActiveCue() {
 /* ── Pane timestamp stamps ── */
 function updatePaneTimestamps() {
   document.getElementById('stampVideo').textContent = fmtMs(videoEl.currentTime);
-  // Show start of next upcoming cue (with offset)
   const t = videoEl.currentTime;
   let nextCue = null;
   for (const c of lastCues) {
     const s = c.start + subtitleOffset;
     if (s > t) { nextCue = c; break; }
   }
-  // Show current cue start if inside one
   for (const c of lastCues) {
     const s = c.start + subtitleOffset;
     const e = c.end   + subtitleOffset;
@@ -1065,7 +1119,6 @@ async function addSubtitle() {
   renderCueList();
   toast('✓ Subtitles loaded — ' + cues.length + ' cues');
 
-  // Open pane if collapsed
   syncPane.classList.remove('collapsed');
 }
 
@@ -1112,7 +1165,6 @@ document.getElementById('subFile').addEventListener('change', function() {
    PANE CONTROLS
    ════════════════════════════════ */
 
-/* Offset ±0.5 buttons */
 document.getElementById('offsetPlus').addEventListener('click', e => {
   e.stopPropagation(); subtitleOffset = Math.round((subtitleOffset + 0.5) * 10) / 10;
   applySubtitleOffset(); renderCueList();
@@ -1122,7 +1174,6 @@ document.getElementById('offsetMinus').addEventListener('click', e => {
   applySubtitleOffset(); renderCueList();
 });
 
-/* Fine slider */
 document.getElementById('fineSlider').addEventListener('input', function() {
   subtitleOffset = Math.round(parseFloat(this.value) * 10) / 10;
   updateOffsetUI();
@@ -1131,29 +1182,25 @@ document.getElementById('fineSlider').addEventListener('input', function() {
   applySubtitleOffset(); renderCueList();
 });
 
-/* Snap to now: find next cue, compute offset so it starts at current video time */
 document.getElementById('btnAutoSync').addEventListener('click', () => {
   if (!lastCues.length) { toast('Load subtitles first'); return; }
   const t = videoEl.currentTime;
-  // Find next cue after current time (without offset)
   let targetCue = null;
   for (const c of lastCues) {
     if (c.start > t - subtitleOffset) { targetCue = c; break; }
   }
-  if (!targetCue) targetCue = lastCues[0]; // fallback to first
+  if (!targetCue) targetCue = lastCues[0];
   subtitleOffset = Math.round((t - targetCue.start) * 10) / 10;
   applySubtitleOffset(); renderCueList();
   toast(`⚡ Snapped: next cue offset ${subtitleOffset>0?'+':''}${subtitleOffset.toFixed(1)}s`);
 });
 
-/* Reset */
 document.getElementById('btnReset').addEventListener('click', () => {
   subtitleOffset = 0;
   applySubtitleOffset(); renderCueList();
   toast('↺ Offset reset to 0');
 });
 
-/* Export SRT with adjusted timestamps */
 document.getElementById('btnExportSrt').addEventListener('click', () => {
   if (!lastCues.length) { toast('No subtitles to export'); return; }
   let srt = '';
@@ -1170,13 +1217,75 @@ document.getElementById('btnExportSrt').addEventListener('click', () => {
   toast('↓ Exported synced SRT');
 });
 
-/* ── KEYBOARD SHORTCUTS ── */
-document.getElementById('url').addEventListener('keydown', e => { if (e.key==='Enter') loadVideo(); });
-document.getElementById('subUrl').addEventListener('keydown', e => { if (e.key==='Enter') addSubtitle(); });
+/* ══════════════════════════════════════
+   KEYBOARD SHORTCUTS
+   ══════════════════════════════════════ */
+document.getElementById('url').addEventListener('keydown',    e => { if (e.key === 'Enter') loadVideo(); });
+document.getElementById('subUrl').addEventListener('keydown', e => { if (e.key === 'Enter') addSubtitle(); });
+
 document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
-  if (e.key===']') { subtitleOffset=Math.round((subtitleOffset+0.5)*10)/10; applySubtitleOffset(); renderCueList(); }
-  if (e.key==='[') { subtitleOffset=Math.round((subtitleOffset-0.5)*10)/10; applySubtitleOffset(); renderCueList(); }
+  // Don't fire shortcuts when typing in an input field
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  switch (e.key) {
+    case ' ':
+    case 'k':
+      // Space/K — play / pause
+      e.preventDefault();
+      togglePlay();
+      showCtrl();
+      break;
+
+    case 'ArrowLeft':
+      // Left arrow — seek back 10s
+      e.preventDefault();
+      skipBack();
+      break;
+
+    case 'ArrowRight':
+      // Right arrow — seek forward 10s
+      e.preventDefault();
+      skipFwd();
+      break;
+
+    case 'f':
+    case 'F':
+      // F — toggle fullscreen
+      e.preventDefault();
+      toggleFullscreen();
+      showCtrl();
+      break;
+
+    case 'c':
+    case 'C':
+      // C — toggle captions
+      e.preventDefault();
+      toggleCaptions();
+      showCtrl();
+      break;
+
+    case 'm':
+    case 'M':
+      // M — mute / unmute (bonus)
+      e.preventDefault();
+      videoEl.muted = !videoEl.muted;
+      updateVolUI();
+      flash(videoEl.muted ? '🔇 Muted' : '🔊 Unmuted');
+      showCtrl();
+      break;
+
+    case ']':
+      // ] — subtitle offset +0.5s
+      subtitleOffset = Math.round((subtitleOffset + 0.5) * 10) / 10;
+      applySubtitleOffset(); renderCueList();
+      break;
+
+    case '[':
+      // [ — subtitle offset −0.5s
+      subtitleOffset = Math.round((subtitleOffset - 0.5) * 10) / 10;
+      applySubtitleOffset(); renderCueList();
+      break;
+  }
 });
 </script>
 </body>
