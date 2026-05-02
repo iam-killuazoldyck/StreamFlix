@@ -3,239 +3,532 @@
 <head>
 <meta charset="UTF-8">
 <title>StreamFlix</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
 
 <style>
-body {
-  margin: 0;
-  background: #141414;
-  font-family: Arial, sans-serif;
-  color: white;
-}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-header {
-  padding: 15px 30px;
-  font-size: 26px;
-  font-weight: bold;
-  color: #e50914;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
-}
+  :root {
+    --red: #e50914;
+    --red-hover: #f6121d;
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #252525;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f0f0;
+    --muted: #888;
+    --radius: 10px;
+    --plyr-color-main: #e50914;
+    --plyr-font-family: 'DM Sans', sans-serif;
+    --plyr-control-radius: 6px;
+  }
 
-.container {
-  max-width: 1100px;
-  margin: auto;
-  padding: 20px;
-}
+  html { scroll-behavior: smooth; }
 
-.input-box {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
 
-.input-box input {
-  flex: 1;
-  padding: 12px;
-  background: #333;
-  border: none;
-  color: white;
-  border-radius: 4px;
-}
+  /* ── HEADER ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: clamp(12px, 3vw, 18px) clamp(16px, 5vw, 40px);
+    background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(15,15,15,0.6) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
 
-.input-box button {
-  background: #e50914;
-  border: none;
-  padding: 12px 20px;
-  color: white;
-  cursor: pointer;
-  border-radius: 4px;
-}
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(22px, 5vw, 32px);
+    letter-spacing: 2px;
+    color: var(--red);
+    text-shadow: 0 0 30px rgba(229,9,20,0.4);
+  }
 
-.input-box button:hover {
-  background: #f6121d;
-}
+  .logo span {
+    color: var(--text);
+    opacity: 0.7;
+  }
 
-.player-wrapper {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: black;
-  border-radius: 12px;
-  overflow: hidden;
-}
+  .header-badge {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+    background: var(--surface2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
 
-/* 🔥 Make Plyr fill the wrapper */
-.player-wrapper .plyr {
-  position: absolute;
-  inset: 0;
-}
+  /* ── MAIN LAYOUT ── */
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: clamp(16px, 4vw, 36px) clamp(12px, 4vw, 30px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(14px, 3vw, 22px);
+  }
 
-/* Ensure video fills properly */
-.player-wrapper video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain; /* or cover */
-}
+  /* ── INPUT SECTION ── */
+  .input-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: clamp(14px, 3vw, 22px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
 
-/* Customize Plyr to look more Netflix-like */
-.plyr--video {
-  --plyr-color-main: #e50914;
-}
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
 
-.plyr__control--overlaid {
-  background: rgba(229,9,20,0.9);
-}
+  .input-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 
-.title {
-  margin-top: 15px;
-  font-size: 20px;
-  font-weight: bold;
-}
+  .input-row input[type="text"],
+  .input-row input[type="url"] {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
 
-.subtitle {
-  font-size: 14px;
-  color: #aaa;
-}
+  .input-row input[type="text"]:focus,
+  .input-row input[type="url"]:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(229,9,20,0.15);
+  }
+
+  .input-row input::placeholder { color: var(--muted); }
+
+  /* File input pill */
+  .file-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 14px;
+    background: var(--surface2);
+    border: 1px dashed rgba(255,255,255,0.18);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s;
+    flex-shrink: 0;
+  }
+  .file-label:hover { border-color: var(--red); color: var(--text); }
+  .file-label svg { width: 14px; height: 14px; flex-shrink: 0; }
+  #subFile { display: none; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 18px;
+    background: var(--red);
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+
+  .btn:hover { background: var(--red-hover); }
+  .btn:active { transform: scale(0.97); }
+
+  .btn svg { width: 15px; height: 15px; }
+
+  /* Sub-row: smaller inputs stacked on mobile */
+  .sub-inputs {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  .sub-inputs input {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  /* ── PLAYER ── */
+  .player-card {
+    background: #000;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  }
+
+  .player-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+  }
+
+  .player-wrapper .plyr,
+  .player-wrapper video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .player-wrapper video { object-fit: contain; }
+
+  /* Plyr overrides */
+  .plyr--video { --plyr-color-main: #e50914; }
+  .plyr__control--overlaid { background: rgba(229,9,20,0.88) !important; }
+  .plyr__control--overlaid:hover { background: rgba(229,9,20,1) !important; }
+
+  /* Plyr controls touch-friendly */
+  .plyr__controls {
+    padding: clamp(6px, 2vw, 12px) !important;
+    gap: clamp(4px, 1.5vw, 8px) !important;
+  }
+
+  /* Empty state overlay */
+  .empty-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--muted);
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  .empty-overlay svg { width: 44px; height: 44px; opacity: 0.35; }
+  .empty-overlay p { font-size: 14px; opacity: 0.5; }
+  .empty-overlay.hidden { opacity: 0; }
+
+  /* ── META INFO ── */
+  .meta {
+    padding: clamp(12px, 3vw, 18px) clamp(14px, 3vw, 20px);
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .meta-title {
+    font-size: clamp(13px, 3.5vw, 17px);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 70vw;
+    color: var(--text);
+  }
+
+  .meta-sub {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* ── TIPS ── */
+  .tips {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+  }
+
+  .tip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .tip-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .tip strong { color: var(--text); font-weight: 500; display: block; margin-bottom: 2px; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: clamp(16px, 4vw, 28px);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(30,30,30,0.95);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    padding: 10px 18px;
+    border-radius: 40px;
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 200;
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── RESPONSIVE TWEAKS ── */
+  @media (max-width: 480px) {
+    .input-row { flex-direction: column; }
+    .input-row .btn { width: 100%; justify-content: center; }
+    .sub-inputs { flex-direction: column; }
+    .file-label { justify-content: center; }
+    .tips { grid-template-columns: 1fr; }
+    .meta-title { max-width: 60vw; }
+  }
+
+  @media (max-width: 360px) {
+    .input-section { padding: 12px; }
+    .btn { padding: 10px 14px; }
+  }
 </style>
 </head>
 
 <body>
 
-<header>StreamFlix</header>
+<header>
+  <div class="logo">Stream<span>Flix</span></div>
+  <div class="header-badge">Web Player</div>
+</header>
 
-<div class="container">
+<main>
 
-  <div class="input-box">
-    <input id="url" placeholder="Paste video URL...">
-    <button onclick="loadVideo()">Play</button>
+  <!-- URL INPUT -->
+  <div class="input-section">
+    <div class="section-label">Video Source</div>
+    <div class="input-row">
+      <input type="url" id="url" placeholder="Paste video URL (mp4, webm, m3u8…)" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="btn" onclick="loadVideo()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        Play
+      </button>
+    </div>
   </div>
-  <div class="input-box">
-    <input id="subUrl" placeholder="Subtitle URL (.vtt)">
-    <input type="file" id="subFile" accept=".vtt,.srt">
-    <button onclick="addSubtitle()">Add Subtitles</button>
-  </div>
-  <div class="player-wrapper">
-    <video id="player" controls></video>
+
+  <!-- SUBTITLE INPUT -->
+  <div class="input-section">
+    <div class="section-label">Subtitles (optional)</div>
+    <div class="input-row">
+      <div class="sub-inputs">
+        <input type="url" id="subUrl" placeholder="Subtitle URL (.vtt / .srt)" autocorrect="off" spellcheck="false">
+        <label class="file-label" for="subFile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span id="fileLabel">Upload file</span>
+        </label>
+        <input type="file" id="subFile" accept=".vtt,.srt">
+      </div>
+      <button class="btn" onclick="addSubtitle()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 3l-4 4-4-4"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
+        Add
+      </button>
+    </div>
   </div>
 
-  <div class="title" id="title">No video loaded</div>
-  <div class="subtitle">Netflix-style player with advanced controls</div>
+  <!-- PLAYER -->
+  <div class="player-card">
+    <div class="player-wrapper">
+      <video id="player" controls playsinline></video>
+      <div class="empty-overlay" id="emptyOverlay">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.87v6.26a1 1 0 0 1-1.447.94L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
+        <p>Paste a URL above and hit Play</p>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="meta-title" id="metaTitle">No video loaded</div>
+      <div class="meta-sub" id="metaSub">Netflix-style player</div>
+    </div>
+  </div>
 
-</div>
+  <!-- TIPS -->
+  <div class="tips">
+    <div class="tip">
+      <div class="tip-icon">🎬</div>
+      <div><strong>Supported formats</strong>MP4, WebM, OGG, HLS (m3u8) streams</div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">💬</div>
+      <div><strong>Subtitles</strong>Paste a .vtt/.srt URL or upload a file from your device</div>
+    </div>
+    <div class="tip">
+      <div class="tip-icon">⚙️</div>
+      <div><strong>Speed & quality</strong>Use the settings icon in the player to adjust playback speed</div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
 
 <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
-
 <script>
-const video = document.getElementById('player');
+  const video = document.getElementById('player');
+  const overlay = document.getElementById('emptyOverlay');
 
-const player = new Plyr(video, {
-  controls: [
-    'play-large',
-    'rewind',
-    'play',
-    'fast-forward',
-    'progress',
-    'current-time',
-    'duration',
-    'mute',
-    'volume',
-    'captions',
-    'settings',
-    'fullscreen'
-  ],
-  settings: ['speed', 'quality', 'captions'],
-  captions: {
-    active: true,
-    update: true,
-    language: 'en'
+  const player = new Plyr(video, {
+    controls: [
+      'play-large', 'rewind', 'play', 'fast-forward',
+      'progress', 'current-time', 'duration',
+      'mute', 'volume', 'captions', 'settings', 'fullscreen'
+    ],
+    settings: ['speed', 'quality', 'captions'],
+    captions: { active: true, update: true, language: 'en' },
+    resetOnEnd: false,
+    keyboard: { focused: true, global: false }
+  });
+
+  // File label update
+  document.getElementById('subFile').addEventListener('change', function () {
+    const name = this.files[0]?.name;
+    document.getElementById('fileLabel').textContent = name
+      ? (name.length > 18 ? name.slice(0, 16) + '…' : name)
+      : 'Upload file';
+  });
+
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 2600);
   }
-});
 
-// 🔥 Convert SRT → VTT
-function srtToVtt(srt) {
-  return "WEBVTT\n\n" + srt
-    .replace(/\r+/g, '')
-    .replace(/(\d+)\n(\d{2}:\d{2}:\d{2}),(\d{3}) --> (\d{2}:\d{2}:\d{2}),(\d{3})/g,
-      (_, i, h1, ms1, h2, ms2) => {
-        return `${i}\n${h1}.${ms1} --> ${h2}.${ms2}`;
-      });
-}
+  function srtToVtt(srt) {
+    return "WEBVTT\n\n" + srt
+      .replace(/\r+/g, '')
+      .replace(/(\d+)\n(\d{2}:\d{2}:\d{2}),(\d{3}) --> (\d{2}:\d{2}:\d{2}),(\d{3})/g,
+        (_, i, h1, ms1, h2, ms2) => `${i}\n${h1}.${ms1} --> ${h2}.${ms2}`);
+  }
 
-// 🔥 Remove existing subtitle tracks
-function clearTracks() {
-  const tracks = video.querySelectorAll('track');
-  tracks.forEach(t => t.remove());
-}
+  function clearTracks() {
+    video.querySelectorAll('track').forEach(t => t.remove());
+  }
 
-// 🔥 Add subtitle
-async function addSubtitle() {
-  const url = document.getElementById('subUrl').value;
-  const file = document.getElementById('subFile').files[0];
+  async function addSubtitle() {
+    const url = document.getElementById('subUrl').value.trim();
+    const file = document.getElementById('subFile').files[0];
+    clearTracks();
 
-  clearTracks();
-
-  let vttBlob;
-
-  // ✅ URL input
-  if (url) {
-    const res = await fetch(url);
-    let text = await res.text();
-
-    if (url.endsWith('.srt')) {
-      text = srtToVtt(text);
+    let vttBlob;
+    try {
+      if (url) {
+        const res = await fetch(url);
+        let text = await res.text();
+        if (url.endsWith('.srt')) text = srtToVtt(text);
+        vttBlob = new Blob([text], { type: 'text/vtt' });
+      }
+      if (file) {
+        let text = await file.text();
+        if (file.name.endsWith('.srt')) text = srtToVtt(text);
+        vttBlob = new Blob([text], { type: 'text/vtt' });
+      }
+    } catch (e) {
+      toast('⚠️ Could not load subtitle file');
+      return;
     }
 
-    vttBlob = new Blob([text], { type: 'text/vtt' });
+    if (!vttBlob) { toast('Paste a URL or pick a file first'); return; }
+
+    const trackURL = URL.createObjectURL(vttBlob);
+    const track = document.createElement('track');
+    track.kind = 'subtitles';
+    track.label = 'Subtitle';
+    track.srclang = 'en';
+    track.src = trackURL;
+    track.default = true;
+    video.appendChild(track);
+
+    try { player.captions.update(); } catch (_) {}
+    toast('✓ Subtitles loaded');
   }
 
-  // ✅ File upload
-  if (file) {
-    let text = await file.text();
+  function loadVideo() {
+    const url = document.getElementById('url').value.trim();
+    if (!url) { toast('Paste a video URL first'); return; }
 
-    if (file.name.endsWith('.srt')) {
-      text = srtToVtt(text);
-    }
+    clearTracks();
 
-    vttBlob = new Blob([text], { type: 'text/vtt' });
+    player.source = {
+      type: 'video',
+      sources: [{ src: url }]
+    };
+
+    const name = url.split('/').pop().split('?')[0] || 'Video';
+    document.getElementById('metaTitle').textContent = decodeURIComponent(name);
+    document.getElementById('metaSub').textContent = new URL(url).hostname;
+    overlay.classList.add('hidden');
+    toast('▶ Loading video…');
   }
 
-  if (!vttBlob) return;
-
-  const trackURL = URL.createObjectURL(vttBlob);
-
-  const track = document.createElement('track');
-  track.kind = 'subtitles';
-  track.label = 'Subtitle';
-  track.srclang = 'en';
-  track.src = trackURL;
-  track.default = true;
-
-  video.appendChild(track);
-
-  // 🔥 Important: force Plyr to re-detect tracks
-  player.captions.update();
-}
-
-// 🔥 Load video
-function loadVideo() {
-  const url = document.getElementById('url').value;
-  if (!url) return;
-
-  clearTracks();
-
-  video.src = url;
-  video.type = 'video/mp4'; // browser will still try best guess
-
-  player.source = {
-    type: 'video',
-    sources: [{ src: url }]
-  };
-
-  document.getElementById("title").innerText = url.split('/').pop();
-}
+  // Allow Enter key in URL input
+  document.getElementById('url').addEventListener('keydown', e => {
+    if (e.key === 'Enter') loadVideo();
+  });
+  document.getElementById('subUrl').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addSubtitle();
+  });
 </script>
-
 </body>
 </html>
