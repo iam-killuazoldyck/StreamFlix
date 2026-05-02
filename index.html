@@ -15,10 +15,13 @@
   --bg: #0f0f0f;
   --surface: #1a1a1a;
   --surface2: #252525;
+  --surface3: #1e1e1e;
   --border: rgba(255,255,255,0.08);
   --text: #f0f0f0;
   --muted: #888;
   --radius: 10px;
+  --pane-w: 340px;
+  --pane-collapse-w: 36px;
 }
 
 html { scroll-behavior: smooth; }
@@ -30,7 +33,7 @@ body {
   overflow-x: hidden;
 }
 
-/* HEADER */
+/* ── HEADER ── */
 header {
   position: sticky; top: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
@@ -43,8 +46,353 @@ header {
 .logo span { color:var(--text); opacity:.7; }
 .header-badge { font-size:11px; font-weight:500; letter-spacing:1px; color:var(--muted); text-transform:uppercase; background:var(--surface2); padding:4px 10px; border-radius:20px; border:1px solid var(--border); }
 
-/* MAIN */
-main { max-width:75%; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw,30px); display:flex; flex-direction:column; gap:clamp(14px,3vw,22px); }
+/* ── LAYOUT SHELL ── */
+.layout {
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100dvh - 64px);
+  position: relative;
+}
+
+/* ── SUBTITLE SYNC PANE ── */
+.sync-pane {
+  position: sticky;
+  top: 64px;
+  height: calc(100dvh - 64px);
+  width: var(--pane-w);
+  min-width: var(--pane-w);
+  background: var(--surface3);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+  z-index: 50;
+  flex-shrink: 0;
+}
+.sync-pane.collapsed {
+  width: var(--pane-collapse-w);
+  min-width: var(--pane-collapse-w);
+}
+
+/* Toggle tab */
+.pane-toggle {
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 56px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pane-toggle:hover { background: var(--surface); }
+.pane-toggle svg {
+  width: 10px; height: 10px;
+  color: var(--muted);
+  transition: transform .3s cubic-bezier(.4,0,.2,1), color .15s;
+  flex-shrink: 0;
+}
+.pane-toggle:hover svg { color: var(--text); }
+.sync-pane.collapsed .pane-toggle svg { transform: rotate(180deg); }
+
+/* Pane inner content */
+.pane-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  opacity: 1;
+  transition: opacity .2s .1s;
+  overflow: hidden;
+}
+.sync-pane.collapsed .pane-inner {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .1s;
+}
+
+/* Collapsed label */
+.collapsed-label {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: var(--pane-collapse-w);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+.sync-pane.collapsed .collapsed-label {
+  opacity: 1;
+  pointer-events: none;
+}
+.collapsed-label span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Pane header */
+.pane-head {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.pane-head-title {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pane-head-title svg { width: 13px; height: 13px; }
+
+/* Offset control */
+.offset-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.offset-label { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.offset-value {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  flex: 1;
+  text-align: center;
+  letter-spacing: .5px;
+}
+.offset-value.positive { color: #4ade80; }
+.offset-value.negative { color: #f87171; }
+.offset-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  transition: background .15s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.offset-btn:hover { background: rgba(255,255,255,.1); }
+.offset-btn:active { transform: scale(.93); }
+
+/* Fine-tune slider */
+.fine-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.fine-label { font-size: 10px; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.fine-slider {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; height: 3px;
+  background: linear-gradient(to right, var(--red) 50%, rgba(255,255,255,.2) 50%);
+  border-radius: 2px; outline: none; cursor: pointer;
+}
+.fine-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px;
+  background: #fff; border-radius: 50%;
+}
+.fine-slider::-moz-range-thumb {
+  width: 13px; height: 13px;
+  background: #fff; border: none; border-radius: 50%;
+}
+
+/* Sync stamp row */
+.stamp-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.stamp-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 9px;
+}
+.stamp-card-label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.stamp-card-val { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
+
+/* Action buttons */
+.pane-actions { display: flex; gap: 6px; margin-bottom: 2px; }
+.pane-btn {
+  flex: 1; padding: 7px 6px; border-radius: 7px;
+  font-size: 11px; font-weight: 500; letter-spacing: .3px;
+  border: 1px solid var(--border);
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: background .15s, color .15s, border-color .15s;
+  -webkit-tap-highlight-color: transparent;
+  text-align: center;
+}
+.pane-btn-ghost { background: transparent; color: var(--muted); }
+.pane-btn-ghost:hover { background: rgba(255,255,255,.06); color: var(--text); }
+.pane-btn-red { background: rgba(229,9,20,.12); color: var(--red); border-color: rgba(229,9,20,.3); }
+.pane-btn-red:hover { background: rgba(229,9,20,.22); }
+
+/* Divider */
+.pane-divider { height: 1px; background: var(--border); flex-shrink: 0; }
+
+/* Cue list */
+.pane-cue-head {
+  padding: 10px 16px 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pane-cue-head-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cue-count {
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--surface2);
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.cue-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  scroll-behavior: smooth;
+}
+.cue-list::-webkit-scrollbar { width: 4px; }
+.cue-list::-webkit-scrollbar-track { background: transparent; }
+.cue-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 2px; }
+
+.cue-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  position: relative;
+}
+.cue-item:hover { border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.04); }
+.cue-item.active {
+  border-color: var(--red);
+  background: rgba(229,9,20,.08);
+}
+.cue-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--red);
+  border-radius: 7px 0 0 7px;
+}
+.cue-time {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cue-time .arrow { opacity: .4; }
+.cue-item.active .cue-time { color: rgba(229,9,20,.8); }
+.cue-text {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cue-text em { font-style: italic; color: var(--muted); }
+
+/* Empty cue state */
+.cue-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+.cue-empty svg { width: 32px; height: 32px; opacity: .2; }
+.cue-empty p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* Preview strip */
+.preview-strip {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+  background: rgba(0,0,0,.3);
+}
+.preview-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.preview-box {
+  background: rgba(0,0,0,.7);
+  border-radius: 6px;
+  padding: 8px 12px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 13px;
+  color: #fff;
+  line-height: 1.4;
+  border: 1px solid rgba(255,255,255,.06);
+  font-style: normal;
+  transition: color .2s;
+}
+.preview-box.empty { color: var(--muted); font-size: 11px; font-style: italic; }
+
+/* ── MAIN CONTENT ── */
+main {
+  flex: 1;
+  min-width: 0;
+  padding: clamp(16px,4vw,36px) clamp(12px,4vw,30px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px,3vw,22px);
+}
 
 /* INPUT CARDS */
 .input-section { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:clamp(14px,3vw,22px); display:flex; flex-direction:column; gap:12px; }
@@ -76,58 +424,29 @@ main { max-width:75%; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw
 .empty-overlay.hidden { opacity:0; }
 
 /* CUSTOM 2-ROW CONTROL BAR */
-.custom-controls {
-  position:absolute; bottom:0; left:0; right:0; z-index:10;
-  padding:0 clamp(8px,2.5vw,16px) clamp(8px,2vw,12px);
-  background:linear-gradient(transparent,rgba(0,0,0,.85) 55%);
-  opacity:0; transition:opacity .25s; pointer-events:none;
-}
+.custom-controls { position:absolute; bottom:0; left:0; right:0; z-index:10; padding:0 clamp(8px,2.5vw,16px) clamp(8px,2vw,12px); background:linear-gradient(transparent,rgba(0,0,0,.85) 55%); opacity:0; transition:opacity .25s; pointer-events:none; }
 .player-wrapper:hover .custom-controls,
 .player-wrapper.show-controls .custom-controls { opacity:1; pointer-events:all; }
-
-/* Row 1: scrubber */
 .ctrl-progress { width:100%; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
-.progress-wrap {
-  flex:1; height:4px; background:rgba(255,255,255,.25);
-  border-radius:2px; cursor:pointer; position:relative;
-  transition:height .15s;
-}
+.progress-wrap { flex:1; height:4px; background:rgba(255,255,255,.25); border-radius:2px; cursor:pointer; position:relative; transition:height .15s; }
 .progress-wrap:hover, .progress-wrap.drag { height:7px; }
 .progress-fill { height:100%; background:var(--red); border-radius:2px; width:0; pointer-events:none; }
-.progress-thumb {
-  position:absolute; top:50%; left:0;
-  transform:translateY(-50%) translateX(-50%) scale(0);
-  width:13px; height:13px; background:#fff; border-radius:50%;
-  pointer-events:none; transition:transform .15s;
-}
+.progress-thumb { position:absolute; top:50%; left:0; transform:translateY(-50%) translateX(-50%) scale(0); width:13px; height:13px; background:#fff; border-radius:50%; pointer-events:none; transition:transform .15s; }
 .progress-wrap:hover .progress-thumb,
 .progress-wrap.drag .progress-thumb { transform:translateY(-50%) translateX(-50%) scale(1); }
 .ctrl-time { font-size:clamp(11px,2.8vw,13px); color:rgba(255,255,255,.85); white-space:nowrap; font-variant-numeric:tabular-nums; user-select:none; }
-
-/* Row 2: buttons */
 .ctrl-row { display:flex; align-items:center; justify-content:space-between; }
 .ctrl-left, .ctrl-right { display:flex; align-items:center; gap:2px; }
-.ctrl-btn {
-  background:none; border:none; color:rgba(255,255,255,.88); cursor:pointer;
-  padding:clamp(5px,1.8vw,8px); border-radius:6px;
-  display:flex; align-items:center; justify-content:center;
-  transition:background .15s,color .15s;
-  -webkit-tap-highlight-color:transparent; touch-action:manipulation; flex-shrink:0;
-}
+.ctrl-btn { background:none; border:none; color:rgba(255,255,255,.88); cursor:pointer; padding:clamp(5px,1.8vw,8px); border-radius:6px; display:flex; align-items:center; justify-content:center; transition:background .15s,color .15s; -webkit-tap-highlight-color:transparent; touch-action:manipulation; flex-shrink:0; }
 .ctrl-btn:hover { background:rgba(255,255,255,.12); color:#fff; }
 .ctrl-btn:active { background:rgba(255,255,255,.22); }
 .ctrl-btn svg { width:clamp(18px,4.5vw,22px); height:clamp(18px,4.5vw,22px); display:block; }
-
-/* Volume */
 .vol-group { display:flex; align-items:center; }
 .vol-slider-wrap { width:0; overflow:hidden; transition:width .2s; display:flex; align-items:center; }
-.vol-group:hover .vol-slider-wrap,
-.vol-group:focus-within .vol-slider-wrap { width:56px; }
+.vol-group:hover .vol-slider-wrap, .vol-group:focus-within .vol-slider-wrap { width:56px; }
 .vol-slider { -webkit-appearance:none; appearance:none; width:52px; height:3px; background:rgba(255,255,255,.35); border-radius:2px; outline:none; cursor:pointer; margin:0 4px; }
 .vol-slider::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; background:#fff; border-radius:50%; cursor:pointer; }
 .vol-slider::-moz-range-thumb { width:12px; height:12px; background:#fff; border:none; border-radius:50%; }
-
-/* Speed */
 .speed-badge { font-size:12px; font-weight:600; color:rgba(255,255,255,.75); padding:4px 8px; border-radius:5px; cursor:pointer; border:1px solid rgba(255,255,255,.22); background:none; font-family:'DM Sans',sans-serif; transition:background .15s,color .15s; -webkit-tap-highlight-color:transparent; }
 .speed-badge:hover { background:rgba(255,255,255,.12); color:#fff; }
 .speed-menu { position:absolute; bottom:70px; right:clamp(8px,2.5vw,16px); background:rgba(14,14,14,.97); border:1px solid rgba(255,255,255,.1); border-radius:8px; overflow:hidden; display:none; flex-direction:column; z-index:20; min-width:80px; box-shadow:0 4px 20px rgba(0,0,0,.65); }
@@ -135,11 +454,7 @@ main { max-width:75%; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw
 .speed-opt { padding:9px 16px; font-size:13px; color:rgba(255,255,255,.72); cursor:pointer; text-align:center; transition:background .1s; }
 .speed-opt:hover { background:rgba(255,255,255,.08); color:#fff; }
 .speed-opt.active { color:var(--red); font-weight:600; }
-
-/* Captions active state */
 .ctrl-btn.captions-on { color: var(--red); }
-
-/* Skip flash */
 .skip-flash { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,.6); color:#fff; font-size:13px; padding:8px 16px; border-radius:20px; pointer-events:none; opacity:0; transition:opacity .25s; z-index:15; }
 .skip-flash.show { opacity:1; }
 
@@ -149,7 +464,7 @@ main { max-width:75%; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw
 .meta-sub { font-size:12px; color:var(--muted); white-space:nowrap; }
 
 /* TIPS */
-.tips { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
+.tips { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }
 .tip { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 14px; display:flex; align-items:flex-start; gap:10px; font-size:13px; color:var(--muted); line-height:1.4; }
 .tip-icon { font-size:18px; flex-shrink:0; margin-top:1px; }
 .tip strong { color:var(--text); font-weight:500; display:block; margin-bottom:2px; }
@@ -158,7 +473,11 @@ main { max-width:75%; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw
 #toast { position:fixed; bottom:clamp(16px,4vw,28px); left:50%; transform:translateX(-50%) translateY(20px); background:rgba(30,30,30,.95); border:1px solid var(--border); backdrop-filter:blur(10px); padding:10px 18px; border-radius:40px; font-size:13px; color:var(--text); opacity:0; transition:opacity .25s,transform .25s; pointer-events:none; white-space:nowrap; z-index:200; }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
-/* RESPONSIVE */
+/* ── RESPONSIVE ── */
+@media (max-width:700px) {
+  :root { --pane-w: 280px; }
+  .sync-pane { position: fixed; left: 0; top: 0; bottom: 0; height: 100dvh; z-index: 200; top: 64px; height: calc(100dvh - 64px); }
+}
 @media (max-width:480px) {
   .input-row { flex-direction:column; }
   .input-row .btn { width:100%; justify-content:center; }
@@ -168,7 +487,6 @@ main { max-width:75%; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw
   .meta-title { max-width:60vw; }
   .vol-slider-wrap { width:44px !important; }
 }
-@media (max-width:360px) { .input-section { padding:12px; } .btn { padding:10px 14px; } }
 </style>
 </head>
 
@@ -178,142 +496,222 @@ main { max-width:75%; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw
   <div class="header-badge">Web Player</div>
 </header>
 
-<main>
-  <!-- VIDEO URL -->
-  <div class="input-section">
-    <div class="section-label">Video Source</div>
-    <div class="input-row">
-      <input type="url" id="url" placeholder="Paste video URL (mp4, webm, m3u8…)" autocomplete="off" autocorrect="off" spellcheck="false">
-      <button class="btn" onclick="loadVideo()">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        Play
-      </button>
-    </div>
-  </div>
+<div class="layout">
 
-  <!-- SUBTITLES -->
-  <div class="input-section">
-    <div class="section-label">Subtitles (optional)</div>
-    <div class="input-row">
-      <div class="sub-inputs">
-        <input type="url" id="subUrl" placeholder="Subtitle URL (.vtt / .srt)" autocorrect="off" spellcheck="false">
-        <label class="file-label" for="subFile">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span id="fileLabel">Upload file</span>
-        </label>
-        <input type="file" id="subFile" accept=".vtt,.srt">
-      </div>
-      <button class="btn" onclick="addSubtitle()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 3l-4 4-4-4"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
-        Add
-      </button>
-    </div>
-  </div>
+  <!-- ══ SUBTITLE SYNC PANE ══ -->
+  <div class="sync-pane" id="syncPane">
+    <button class="pane-toggle" id="paneToggle" title="Toggle subtitle pane">
+      <!-- left chevron -->
+      <svg viewBox="0 0 10 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="7,2 2,8 7,14"/>
+      </svg>
+    </button>
 
-  <!-- PLAYER -->
-  <div class="player-card">
-    <div class="player-wrapper" id="playerWrapper">
-      <video id="player" playsinline></video>
+    <!-- Collapsed pill label -->
+    <div class="collapsed-label"><span>Subtitle Sync</span></div>
 
-      <div class="empty-overlay" id="emptyOverlay">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.87v6.26a1 1 0 0 1-1.447.94L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
-        <p>Paste a URL above and hit Play</p>
-      </div>
+    <!-- Expanded content -->
+    <div class="pane-inner">
 
-      <!-- CUSTOM CONTROLS -->
-      <div class="custom-controls" id="customControls">
-        <!-- Row 1: scrubber + time -->
-        <div class="ctrl-progress">
-          <div class="progress-wrap" id="progressWrap">
-            <div class="progress-fill" id="progressFill"></div>
-            <div class="progress-thumb" id="progressThumb"></div>
-          </div>
-          <div class="ctrl-time" id="ctrlTime">0:00 / 0:00</div>
+      <!-- Head -->
+      <div class="pane-head">
+        <div class="pane-head-title">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 8H9.5v-.5h-2v3h2V14H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V14H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/></svg>
+          Subtitle Sync
         </div>
 
-        <!-- Row 2: icons -->
-        <div class="ctrl-row">
-          <div class="ctrl-left">
-            <button class="ctrl-btn" id="btnPlay" title="Play / Pause">
-              <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-            </button>
-            <button class="ctrl-btn" id="btnRew" title="−10s">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.99 5V2l-5 5 5 5V8c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-                <text x="12" y="15" text-anchor="middle" font-size="5.5" font-family="sans-serif" fill="currentColor">10</text>
-              </svg>
-            </button>
-            <button class="ctrl-btn" id="btnFwd" title="+10s">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 5V2l5 5-5 5V8c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/>
-                <text x="12" y="15" text-anchor="middle" font-size="5.5" font-family="sans-serif" fill="currentColor">10</text>
-              </svg>
-            </button>
-            <div class="vol-group">
-              <button class="ctrl-btn" id="btnMute" title="Mute">
-                <svg id="iconVol" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                <svg id="iconMuteEl" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+        <!-- Stamp row: video time vs sub time -->
+        <div class="stamp-row">
+          <div class="stamp-card">
+            <div class="stamp-card-label">▶ Video</div>
+            <div class="stamp-card-val" id="stampVideo">0:00.0</div>
+          </div>
+          <div class="stamp-card">
+            <div class="stamp-card-label">💬 Sub cue</div>
+            <div class="stamp-card-val" id="stampSub">—</div>
+          </div>
+        </div>
+
+        <!-- Offset control -->
+        <div class="offset-block">
+          <button class="offset-btn" id="offsetMinus" title="−0.5s">−</button>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:2px">Offset</div>
+            <div class="offset-value" id="offsetDisplay">0.0 s</div>
+          </div>
+          <button class="offset-btn" id="offsetPlus" title="+0.5s">+</button>
+        </div>
+
+        <!-- Fine-tune slider (−5 to +5 s) -->
+        <div class="fine-row">
+          <div class="fine-label">Fine −5s</div>
+          <input type="range" class="fine-slider" id="fineSlider" min="-5" max="5" step="0.1" value="0">
+          <div class="fine-label">+5s</div>
+        </div>
+
+        <!-- Actions -->
+        <div class="pane-actions">
+          <button class="pane-btn pane-btn-ghost" id="btnAutoSync" title="Snap offset so next cue starts now">⚡ Snap to now</button>
+          <button class="pane-btn pane-btn-ghost" id="btnReset">↺ Reset</button>
+          <button class="pane-btn pane-btn-red" id="btnExportSrt">↓ SRT</button>
+        </div>
+      </div>
+
+      <div class="pane-divider"></div>
+
+      <!-- Cue list head -->
+      <div class="pane-cue-head">
+        <div class="pane-cue-head-label">Cue List</div>
+        <div class="cue-count" id="cueCount">0 cues</div>
+      </div>
+
+      <!-- Cue list -->
+      <div class="cue-list" id="cueList">
+        <div class="cue-empty" id="cueEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 3l-4 4-4-4"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
+          <p>Add subtitles to see<br>and sync cues here</p>
+        </div>
+      </div>
+
+      <!-- Live preview strip -->
+      <div class="preview-strip">
+        <div class="preview-label">Live Preview</div>
+        <div class="preview-box empty" id="previewBox">no subtitle active</div>
+      </div>
+
+    </div><!-- /pane-inner -->
+  </div><!-- /sync-pane -->
+
+  <!-- ══ MAIN CONTENT ══ -->
+  <main>
+    <!-- VIDEO URL -->
+    <div class="input-section">
+      <div class="section-label">Video Source</div>
+      <div class="input-row">
+        <input type="url" id="url" placeholder="Paste video URL (mp4, webm, m3u8…)" autocomplete="off" autocorrect="off" spellcheck="false">
+        <button class="btn" onclick="loadVideo()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Play
+        </button>
+      </div>
+    </div>
+
+    <!-- SUBTITLES -->
+    <div class="input-section">
+      <div class="section-label">Subtitles (optional)</div>
+      <div class="input-row">
+        <div class="sub-inputs">
+          <input type="url" id="subUrl" placeholder="Subtitle URL (.vtt / .srt)" autocorrect="off" spellcheck="false">
+          <label class="file-label" for="subFile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span id="fileLabel">Upload file</span>
+          </label>
+          <input type="file" id="subFile" accept=".vtt,.srt">
+        </div>
+        <button class="btn" onclick="addSubtitle()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 3l-4 4-4-4"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
+          Add
+        </button>
+      </div>
+    </div>
+
+    <!-- PLAYER -->
+    <div class="player-card">
+      <div class="player-wrapper" id="playerWrapper">
+        <video id="player" playsinline></video>
+
+        <div class="empty-overlay" id="emptyOverlay">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.87v6.26a1 1 0 0 1-1.447.94L15 14M3 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8z"/></svg>
+          <p>Paste a URL above and hit Play</p>
+        </div>
+
+        <!-- CUSTOM CONTROLS -->
+        <div class="custom-controls" id="customControls">
+          <div class="ctrl-progress">
+            <div class="progress-wrap" id="progressWrap">
+              <div class="progress-fill" id="progressFill"></div>
+              <div class="progress-thumb" id="progressThumb"></div>
+            </div>
+            <div class="ctrl-time" id="ctrlTime">0:00 / 0:00</div>
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-left">
+              <button class="ctrl-btn" id="btnPlay" title="Play / Pause">
+                <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
               </button>
-              <div class="vol-slider-wrap">
-                <input type="range" class="vol-slider" id="volSlider" min="0" max="1" step="0.05" value="1">
+              <button class="ctrl-btn" id="btnRew" title="−10s">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.99 5V2l-5 5 5 5V8c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                  <text x="12" y="15" text-anchor="middle" font-size="5.5" font-family="sans-serif" fill="currentColor">10</text>
+                </svg>
+              </button>
+              <button class="ctrl-btn" id="btnFwd" title="+10s">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 5V2l5 5-5 5V8c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/>
+                  <text x="12" y="15" text-anchor="middle" font-size="5.5" font-family="sans-serif" fill="currentColor">10</text>
+                </svg>
+              </button>
+              <div class="vol-group">
+                <button class="ctrl-btn" id="btnMute" title="Mute">
+                  <svg id="iconVol" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                  <svg id="iconMuteEl" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                </button>
+                <div class="vol-slider-wrap">
+                  <input type="range" class="vol-slider" id="volSlider" min="0" max="1" step="0.05" value="1">
+                </div>
               </div>
             </div>
+            <div class="ctrl-right">
+              <button class="speed-badge" id="btnSpeed">1×</button>
+              <button class="ctrl-btn" id="btnCaptions" title="Captions">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 8H9.5v-.5h-2v3h2V14H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V14H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/></svg>
+              </button>
+              <button class="ctrl-btn" id="btnFs" title="Fullscreen">
+                <svg id="iconFs" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                <svg id="iconExit" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+              </button>
+            </div>
           </div>
-
-          <div class="ctrl-right">
-            <button class="speed-badge" id="btnSpeed">1×</button>
-            <button class="ctrl-btn" id="btnCaptions" title="Captions">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 8H9.5v-.5h-2v3h2V14H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V14H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z"/></svg>
-            </button>
-            <button class="ctrl-btn" id="btnFs" title="Fullscreen">
-              <svg id="iconFs" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-              <svg id="iconExit" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
-            </button>
-            <button class="ctrl-btn" id="subDelayMinus" title="Subtitle delay -0.5s">−</button>
-            <button class="ctrl-btn" id="subDelayPlus" title="Subtitle delay +0.5s">+</button>
+          <div class="speed-menu" id="speedMenu">
+            <div class="speed-opt" data-speed="0.25">0.25×</div>
+            <div class="speed-opt" data-speed="0.5">0.5×</div>
+            <div class="speed-opt" data-speed="0.75">0.75×</div>
+            <div class="speed-opt active" data-speed="1">1×</div>
+            <div class="speed-opt" data-speed="1.25">1.25×</div>
+            <div class="speed-opt" data-speed="1.5">1.5×</div>
+            <div class="speed-opt" data-speed="2">2×</div>
           </div>
         </div>
 
-        <!-- Speed menu -->
-        <div class="speed-menu" id="speedMenu">
-          <div class="speed-opt" data-speed="0.25">0.25×</div>
-          <div class="speed-opt" data-speed="0.5">0.5×</div>
-          <div class="speed-opt" data-speed="0.75">0.75×</div>
-          <div class="speed-opt active" data-speed="1">1×</div>
-          <div class="speed-opt" data-speed="1.25">1.25×</div>
-          <div class="speed-opt" data-speed="1.5">1.5×</div>
-          <div class="speed-opt" data-speed="2">2×</div>
-        </div>
-        
+        <div class="skip-flash" id="skipFlash"></div>
       </div>
 
-      <div class="skip-flash" id="skipFlash"></div>
+      <div class="meta">
+        <div class="meta-title" id="metaTitle">No video loaded</div>
+        <div class="meta-sub" id="metaSub">StreamFlix Player</div>
+      </div>
     </div>
 
-    <div class="meta">
-      <div class="meta-title" id="metaTitle">No video loaded</div>
-      <div class="meta-sub" id="metaSub">StreamFlix Player</div>
+    <!-- TIPS -->
+    <div class="tips">
+      <div class="tip"><div class="tip-icon">🎬</div><div><strong>Supported formats</strong>MP4, WebM, OGG, HLS (m3u8)</div></div>
+      <div class="tip"><div class="tip-icon">💬</div><div><strong>Subtitles</strong>Paste a .vtt/.srt URL or upload from device</div></div>
+      <div class="tip"><div class="tip-icon">⚡</div><div><strong>Snap to now</strong>Auto-aligns next cue to current playhead</div></div>
+      <div class="tip"><div class="tip-icon">⌨️</div><div><strong>Keyboard</strong>[ / ] to shift subs ±0.5s</div></div>
     </div>
-  </div>
+  </main>
 
-  <!-- TIPS -->
-  <div class="tips">
-    <div class="tip"><div class="tip-icon">🎬</div><div><strong>Supported formats</strong>MP4, WebM, OGG, HLS (m3u8)</div></div>
-    <div class="tip"><div class="tip-icon">💬</div><div><strong>Subtitles</strong>Paste a .vtt/.srt URL or upload from device</div></div>
-    <div class="tip"><div class="tip-icon">⚡</div><div><strong>Speed control</strong>Tap the speed badge in the player</div></div>
-  </div>
-</main>
+</div><!-- /layout -->
 
 <div id="toast"></div>
 
-<!-- hls.js for m3u8 support -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 
 <script>
-const videoEl = document.getElementById('player');
-const wrapper = document.getElementById('playerWrapper');
-const overlay = document.getElementById('emptyOverlay');
+const videoEl   = document.getElementById('player');
+const wrapper   = document.getElementById('playerWrapper');
+const overlay   = document.getElementById('emptyOverlay');
 let hlsInstance = null;
 let captionsVisible = false;
 
@@ -323,6 +721,21 @@ function fmt(s) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = Math.floor(s % 60);
   return h ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`;
 }
+function fmtMs(s) {
+  if (isNaN(s) || s == null) return '—';
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = (s % 60).toFixed(1);
+  return h
+    ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(4,'0')}`
+    : `${m}:${String(sec).padStart(4,'0')}`;
+}
+function fmtSrtTime(s) {
+  // HH:MM:SS,mmm
+  const h  = Math.floor(s / 3600);
+  const m  = Math.floor((s % 3600) / 60);
+  const sc = Math.floor(s % 60);
+  const ms = Math.round((s % 1) * 1000);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')},${String(ms).padStart(3,'0')}`;
+}
 function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
@@ -331,6 +744,11 @@ function toast(msg) {
 const skipFlash = document.getElementById('skipFlash');
 let flashT;
 function flash(msg) { skipFlash.textContent = msg; skipFlash.classList.add('show'); clearTimeout(flashT); flashT = setTimeout(() => skipFlash.classList.remove('show'), 700); }
+
+/* ── PANE TOGGLE ── */
+const syncPane   = document.getElementById('syncPane');
+const paneToggle = document.getElementById('paneToggle');
+paneToggle.addEventListener('click', () => syncPane.classList.toggle('collapsed'));
 
 /* ── AUTO-HIDE CONTROLS ── */
 let hideT;
@@ -342,7 +760,7 @@ wrapper.addEventListener('mousemove', showCtrl);
 let lastTap = 0;
 wrapper.addEventListener('touchstart', () => {
   const now = Date.now();
-  if (now - lastTap < 300) { togglePlay(); }
+  if (now - lastTap < 300) togglePlay();
   else { wrapper.classList.contains('show-controls') ? wrapper.classList.remove('show-controls') : showCtrl(); }
   lastTap = now;
 }, { passive: true });
@@ -354,17 +772,8 @@ function togglePlay() {
 }
 wrapper.addEventListener('click', e => { if (!e.target.closest('.custom-controls')) togglePlay(); });
 document.getElementById('btnPlay').addEventListener('click', e => { e.stopPropagation(); togglePlay(); });
-
-videoEl.addEventListener('play', () => {
-  document.getElementById('iconPlay').style.display = 'none';
-  document.getElementById('iconPause').style.display = '';
-  showCtrl();
-});
-videoEl.addEventListener('pause', () => {
-  document.getElementById('iconPlay').style.display = '';
-  document.getElementById('iconPause').style.display = 'none';
-  wrapper.classList.add('show-controls'); clearTimeout(hideT);
-});
+videoEl.addEventListener('play',  () => { document.getElementById('iconPlay').style.display='none'; document.getElementById('iconPause').style.display=''; showCtrl(); });
+videoEl.addEventListener('pause', () => { document.getElementById('iconPlay').style.display=''; document.getElementById('iconPause').style.display='none'; wrapper.classList.add('show-controls'); clearTimeout(hideT); });
 
 /* ── SCRUBBER ── */
 const progressWrap  = document.getElementById('progressWrap');
@@ -378,35 +787,28 @@ videoEl.addEventListener('timeupdate', () => {
   progressFill.style.width = pct + '%';
   progressThumb.style.left = pct + '%';
   ctrlTime.textContent = fmt(videoEl.currentTime) + ' / ' + fmt(videoEl.duration);
+  updatePaneTimestamps();
+  highlightActiveCue();
 });
 
 let scrubbing = false;
-function scrubTo(clientX) {
-  const r = progressWrap.getBoundingClientRect();
-  const ratio = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
-  if (videoEl.duration) videoEl.currentTime = ratio * videoEl.duration;
-}
-progressWrap.addEventListener('mousedown', e => { scrubbing = true; progressWrap.classList.add('drag'); scrubTo(e.clientX); e.preventDefault(); });
-progressWrap.addEventListener('touchstart', e => { scrubbing = true; progressWrap.classList.add('drag'); scrubTo(e.touches[0].clientX); }, { passive: true });
-document.addEventListener('mousemove', e => { if (scrubbing) scrubTo(e.clientX); });
-document.addEventListener('touchmove', e => { if (scrubbing) scrubTo(e.touches[0].clientX); }, { passive: true });
-document.addEventListener('mouseup', () => { scrubbing = false; progressWrap.classList.remove('drag'); });
-document.addEventListener('touchend', () => { scrubbing = false; progressWrap.classList.remove('drag'); });
+function scrubTo(clientX) { const r = progressWrap.getBoundingClientRect(); const ratio = Math.max(0,Math.min(1,(clientX-r.left)/r.width)); if (videoEl.duration) videoEl.currentTime = ratio * videoEl.duration; }
+progressWrap.addEventListener('mousedown',  e => { scrubbing=true; progressWrap.classList.add('drag'); scrubTo(e.clientX); e.preventDefault(); });
+progressWrap.addEventListener('touchstart', e => { scrubbing=true; progressWrap.classList.add('drag'); scrubTo(e.touches[0].clientX); }, { passive:true });
+document.addEventListener('mousemove',  e => { if (scrubbing) scrubTo(e.clientX); });
+document.addEventListener('touchmove',  e => { if (scrubbing) scrubTo(e.touches[0].clientX); }, { passive:true });
+document.addEventListener('mouseup',    () => { scrubbing=false; progressWrap.classList.remove('drag'); });
+document.addEventListener('touchend',   () => { scrubbing=false; progressWrap.classList.remove('drag'); });
 
 /* ── SKIP ── */
-document.getElementById('btnRew').addEventListener('click', e => { e.stopPropagation(); videoEl.currentTime = Math.max(0, videoEl.currentTime - 10); flash('⏮ −10s'); });
-document.getElementById('btnFwd').addEventListener('click', e => { e.stopPropagation(); videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 10); flash('+10s ⏭'); });
+document.getElementById('btnRew').addEventListener('click', e => { e.stopPropagation(); videoEl.currentTime=Math.max(0,videoEl.currentTime-10); flash('⏮ −10s'); });
+document.getElementById('btnFwd').addEventListener('click', e => { e.stopPropagation(); videoEl.currentTime=Math.min(videoEl.duration||0,videoEl.currentTime+10); flash('+10s ⏭'); });
 
 /* ── VOLUME ── */
 const volSlider = document.getElementById('volSlider');
-function updateVolUI() {
-  const m = videoEl.muted || videoEl.volume === 0;
-  document.getElementById('iconVol').style.display    = m ? 'none' : '';
-  document.getElementById('iconMuteEl').style.display = m ? '' : 'none';
-  volSlider.value = m ? 0 : videoEl.volume;
-}
-document.getElementById('btnMute').addEventListener('click', e => { e.stopPropagation(); videoEl.muted = !videoEl.muted; updateVolUI(); });
-volSlider.addEventListener('input', e => { e.stopPropagation(); videoEl.volume = +volSlider.value; videoEl.muted = videoEl.volume === 0; updateVolUI(); });
+function updateVolUI() { const m=videoEl.muted||videoEl.volume===0; document.getElementById('iconVol').style.display=m?'none':''; document.getElementById('iconMuteEl').style.display=m?'':'none'; volSlider.value=m?0:videoEl.volume; }
+document.getElementById('btnMute').addEventListener('click',  e => { e.stopPropagation(); videoEl.muted=!videoEl.muted; updateVolUI(); });
+volSlider.addEventListener('input', e => { e.stopPropagation(); videoEl.volume=+volSlider.value; videoEl.muted=videoEl.volume===0; updateVolUI(); });
 
 /* ── SPEED ── */
 const speedMenu = document.getElementById('speedMenu');
@@ -424,26 +826,20 @@ document.querySelectorAll('.speed-opt').forEach(opt => {
 });
 document.addEventListener('click', e => { if (!e.target.closest('#speedMenu,#btnSpeed')) speedMenu.classList.remove('open'); });
 
-/* ── CAPTIONS toggle ── */
+/* ── CAPTIONS ── */
 const btnCaptions = document.getElementById('btnCaptions');
 btnCaptions.addEventListener('click', e => {
   e.stopPropagation();
   captionsVisible = !captionsVisible;
-  // Toggle ALL text tracks (including our programmatic one)
-  for (const track of videoEl.textTracks) {
-    track.mode = captionsVisible ? 'showing' : 'hidden';
-  }
+  for (const track of videoEl.textTracks) track.mode = captionsVisible ? 'showing' : 'hidden';
   btnCaptions.classList.toggle('captions-on', captionsVisible);
 });
 
 /* ── FULLSCREEN ── */
 document.getElementById('btnFs').addEventListener('click', e => {
   e.stopPropagation();
-  if (!document.fullscreenElement) {
-    (wrapper.requestFullscreen || wrapper.webkitRequestFullscreen).call(wrapper);
-  } else {
-    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-  }
+  if (!document.fullscreenElement) (wrapper.requestFullscreen||wrapper.webkitRequestFullscreen).call(wrapper);
+  else (document.exitFullscreen||document.webkitExitFullscreen).call(document);
 });
 document.addEventListener('fullscreenchange', () => {
   const fs = !!document.fullscreenElement;
@@ -451,115 +847,188 @@ document.addEventListener('fullscreenchange', () => {
   document.getElementById('iconExit').style.display = fs ? '' : 'none';
 });
 
+/* ════════════════════════════════
+   SUBTITLE ENGINE
+   ════════════════════════════════ */
+
 let programmaticTrack = null;
-let subtitleOffset = 0; // seconds (+ forward, - backward)
+let subtitleOffset = 0;
+let lastCues = [];        // raw parsed cues [{start,end,text}]
+let activeCueIdx = -1;
 
 function clearTracks() {
-  // Remove any legacy <track> elements
   videoEl.querySelectorAll('track').forEach(t => t.remove());
-  // Hide & drain our programmatic track
   if (programmaticTrack) {
     programmaticTrack.mode = 'hidden';
     while (programmaticTrack.cues && programmaticTrack.cues.length) {
-      try { programmaticTrack.removeCue(programmaticTrack.cues[0]); } catch (_) { break; }
+      try { programmaticTrack.removeCue(programmaticTrack.cues[0]); } catch(_) { break; }
     }
     programmaticTrack = null;
   }
 }
 
-/* ── Timestamp parsers ── */
-function parseSrtTime(s) {
-  // "HH:MM:SS,mmm" → seconds
-  const [hms, ms] = s.split(',');
-  const [h, m, sec] = hms.split(':').map(Number);
-  return h * 3600 + m * 60 + sec + Number(ms) / 1000;
-}
-function parseVttTime(s) {
-  // "HH:MM:SS.mmm" or "MM:SS.mmm" → seconds
-  const parts = s.trim().split(':').map(Number);
-  return parts.length === 3
-    ? parts[0] * 3600 + parts[1] * 60 + parts[2]
-    : parts[0] * 60 + parts[1];
-}
-
-/* ── Format parsers → [{start, end, text}] ── */
+/* ── Parsers ── */
+function parseSrtTime(s) { const [hms,ms]=s.split(','); const [h,m,sec]=hms.split(':').map(Number); return h*3600+m*60+sec+Number(ms)/1000; }
+function parseVttTime(s) { const parts=s.trim().split(':').map(Number); return parts.length===3 ? parts[0]*3600+parts[1]*60+parts[2] : parts[0]*60+parts[1]; }
 function parseSrt(raw) {
-  const cues = [];
-  const blocks = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim().split(/\n{2,}/);
+  const cues=[];
+  const blocks=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim().split(/\n{2,}/);
   for (const block of blocks) {
-    const lines = block.trim().split('\n');
-    const timeLine = lines.find(l => l.includes('-->'));
+    const lines=block.trim().split('\n');
+    const timeLine=lines.find(l=>l.includes('-->'));
     if (!timeLine) continue;
-    const [startStr, endStr] = timeLine.split('-->').map(s => s.trim());
-    const ti = lines.indexOf(timeLine);
-    const text = lines.slice(ti + 1).join('\n').replace(/<[^>]+>/g, '').trim();
-    if (text) cues.push({ start: parseSrtTime(startStr), end: parseSrtTime(endStr), text });
+    const [startStr,endStr]=timeLine.split('-->').map(s=>s.trim());
+    const ti=lines.indexOf(timeLine);
+    const text=lines.slice(ti+1).join('\n').replace(/<[^>]+>/g,'').trim();
+    if (text) cues.push({start:parseSrtTime(startStr),end:parseSrtTime(endStr),text});
   }
   return cues;
 }
 function parseVtt(raw) {
-  const cues = [];
-  const blocks = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split(/\n{2,}/);
+  const cues=[];
+  const blocks=raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split(/\n{2,}/);
   for (const block of blocks) {
-    const lines = block.trim().split('\n');
-    const timeLine = lines.find(l => l.includes('-->'));
+    const lines=block.trim().split('\n');
+    const timeLine=lines.find(l=>l.includes('-->'));
     if (!timeLine) continue;
-    const [startStr, endStr] = timeLine.split('-->').map(s => s.trim().split(/\s/)[0]);
-    const ti = lines.indexOf(timeLine);
-    const text = lines.slice(ti + 1).join('\n').replace(/<[^>]+>/g, '').trim();
-    if (text) cues.push({ start: parseVttTime(startStr), end: parseVttTime(endStr), text });
+    const [startStr,endStr]=timeLine.split('-->').map(s=>s.trim().split(/\s/)[0]);
+    const ti=lines.indexOf(timeLine);
+    const text=lines.slice(ti+1).join('\n').replace(/<[^>]+>/g,'').trim();
+    if (text) cues.push({start:parseVttTime(startStr),end:parseVttTime(endStr),text});
   }
   return cues;
 }
 
-/* ── Inject cues via addTextTrack (no crossorigin needed) ── */
-let lastCues = [];
-/* ── Inject cues with time clamping ── */
 function loadCuesIntoTrack(cues) {
-  const track = videoEl.addTextTrack('subtitles', 'Subtitle', 'en');
-  for (const { start, end, text } of cues) {
-    // Clamp start to 0, end must be > start
+  clearTracks();
+  const track = videoEl.addTextTrack('subtitles','Subtitle','en');
+  for (const {start,end,text} of cues) {
     const s = Math.max(0, start + subtitleOffset);
-    const e = Math.max(s + 0.001, end + subtitleOffset);
-    try { track.addCue(new VTTCue(s, e, text)); } catch (_) {}
+    const e = Math.max(s+0.001, end + subtitleOffset);
+    try { track.addCue(new VTTCue(s,e,text)); } catch(_) {}
   }
   track.mode = 'showing';
   programmaticTrack = track;
   captionsVisible = true;
   btnCaptions.classList.add('captions-on');
-  toast('✓ Subtitles loaded');
 }
 
-async function applySubtitleOffset() {
+function applySubtitleOffset() {
   if (!lastCues.length) return;
+  loadCuesIntoTrack(lastCues);
+  updateOffsetUI();
+  updateFineSlider();
+}
 
-  clearTracks();
+function updateOffsetUI() {
+  const el = document.getElementById('offsetDisplay');
+  const sign = subtitleOffset > 0 ? '+' : '';
+  el.textContent = sign + subtitleOffset.toFixed(1) + ' s';
+  el.className = 'offset-value' + (subtitleOffset > 0 ? ' positive' : subtitleOffset < 0 ? ' negative' : '');
+}
 
-  const track = videoEl.addTextTrack('subtitles', 'Subtitle', 'en');
-  for (const { start, end, text } of lastCues) {
-    const s = Math.max(0, start + subtitleOffset);
-    const e = Math.max(s + 0.001, end + subtitleOffset);
-    try { track.addCue(new VTTCue(s, e, text)); } catch (_) {}
+function updateFineSlider() {
+  const slider = document.getElementById('fineSlider');
+  const clamped = Math.max(-5, Math.min(5, subtitleOffset));
+  slider.value = clamped;
+  // update gradient
+  const pct = ((clamped + 5) / 10) * 100;
+  slider.style.background = `linear-gradient(to right, var(--red) ${pct}%, rgba(255,255,255,.2) ${pct}%)`;
+}
+
+/* ── Cue list render ── */
+function renderCueList() {
+  const list  = document.getElementById('cueList');
+  const empty = document.getElementById('cueEmpty');
+  const count = document.getElementById('cueCount');
+  count.textContent = lastCues.length + ' cues';
+
+  if (!lastCues.length) {
+    empty.style.display = 'flex';
+    // Remove all cue items
+    list.querySelectorAll('.cue-item').forEach(el => el.remove());
+    return;
+  }
+  empty.style.display = 'none';
+  list.querySelectorAll('.cue-item').forEach(el => el.remove());
+
+  lastCues.forEach((cue, i) => {
+    const item = document.createElement('div');
+    item.className = 'cue-item';
+    item.dataset.idx = i;
+    const adjStart = cue.start + subtitleOffset;
+    const adjEnd   = cue.end   + subtitleOffset;
+    item.innerHTML = `
+      <div class="cue-time">
+        <span>${fmtMs(adjStart)}</span>
+        <span class="arrow">→</span>
+        <span>${fmtMs(adjEnd)}</span>
+      </div>
+      <div class="cue-text">${cue.text.replace(/\n/g,' ')}</div>`;
+    item.addEventListener('click', () => {
+      if (videoEl.duration) videoEl.currentTime = Math.max(0, adjStart - 0.1);
+      videoEl.play().catch(()=>{});
+    });
+    list.appendChild(item);
+  });
+}
+
+/* ── Highlight active cue ── */
+function highlightActiveCue() {
+  if (!lastCues.length) return;
+  const t = videoEl.currentTime;
+  let newIdx = -1;
+  for (let i = 0; i < lastCues.length; i++) {
+    const s = lastCues[i].start + subtitleOffset;
+    const e = lastCues[i].end   + subtitleOffset;
+    if (t >= s && t < e) { newIdx = i; break; }
   }
 
-  track.mode = captionsVisible ? 'showing' : 'hidden';
-  programmaticTrack = track;
+  // Update preview
+  const preview = document.getElementById('previewBox');
+  if (newIdx !== -1) {
+    preview.textContent = lastCues[newIdx].text.replace(/\n/,' ');
+    preview.classList.remove('empty');
+  } else {
+    preview.textContent = 'no subtitle active';
+    preview.classList.add('empty');
+  }
 
-  // Force the browser to re‑evaluate active cues now
-  const currentTime = videoEl.currentTime;
-  // Briefly hide and re‑show the track to trigger a full sync
-  track.mode = 'hidden';
-  // Using a 0ms timeout pushes the mode change to the next event loop
-  setTimeout(() => {
-    track.mode = captionsVisible ? 'showing' : 'hidden';
-    // Optional: tiny seek to ensure cue change fires
-    videoEl.currentTime = currentTime;
-  }, 0);
+  if (newIdx === activeCueIdx) return;
+  activeCueIdx = newIdx;
 
-  toast(`⏱ Subtitle offset: ${subtitleOffset > 0 ? '+' : ''}${subtitleOffset.toFixed(1)}s`);
+  const list = document.getElementById('cueList');
+  list.querySelectorAll('.cue-item').forEach((el, i) => {
+    el.classList.toggle('active', i === newIdx);
+  });
+
+  // Scroll active cue into view
+  if (newIdx !== -1) {
+    const activeEl = list.querySelector(`.cue-item[data-idx="${newIdx}"]`);
+    if (activeEl) activeEl.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  }
 }
 
-/* ── CORS-fallback fetch for subtitle URLs ── */
+/* ── Pane timestamp stamps ── */
+function updatePaneTimestamps() {
+  document.getElementById('stampVideo').textContent = fmtMs(videoEl.currentTime);
+  // Show start of next upcoming cue (with offset)
+  const t = videoEl.currentTime;
+  let nextCue = null;
+  for (const c of lastCues) {
+    const s = c.start + subtitleOffset;
+    if (s > t) { nextCue = c; break; }
+  }
+  // Show current cue start if inside one
+  for (const c of lastCues) {
+    const s = c.start + subtitleOffset;
+    const e = c.end   + subtitleOffset;
+    if (t >= s && t < e) { nextCue = c; break; }
+  }
+  document.getElementById('stampSub').textContent = nextCue ? fmtMs(nextCue.start + subtitleOffset) : '—';
+}
+
+/* ── CORS-fallback fetch ── */
 async function fetchSubText(url) {
   const attempts = [
     () => fetch(`https://proxy.corsfix.com/?${url}`),
@@ -567,10 +1036,7 @@ async function fetchSubText(url) {
     () => fetch(`https://crossorigin.me/${encodeURIComponent(url)}`),
   ];
   for (const attempt of attempts) {
-    try {
-      const res = await attempt();
-      if (res.ok) return await res.text();
-    } catch (_) {}
+    try { const res=await attempt(); if (res.ok) return await res.text(); } catch(_) {}
   }
   throw new Error('All proxies failed');
 }
@@ -580,104 +1046,137 @@ async function addSubtitle() {
   const file = document.getElementById('subFile').files[0];
   if (!url && !file) { toast('Paste a URL or pick a file first'); return; }
 
-  clearTracks();
+  subtitleOffset = 0;
+  updateOffsetUI();
+  updateFineSlider();
 
-  let rawText = null;
-  let isSrt   = false;
-
+  let rawText = null, isSrt = false;
   try {
-    if (url) {
-      rawText = await fetchSubText(url);
-      isSrt   = /\.srt(\?.*)?$/i.test(url);
-    } else if (file) {
-      rawText = await file.text();
-      isSrt   = file.name.toLowerCase().endsWith('.srt');
-    }
-  } catch {
-    toast('⚠️ Subtitle blocked by CORS — try uploading the file directly');
-    return;
-  }
+    if (url) { rawText = await fetchSubText(url); isSrt = /\.srt(\?.*)?$/i.test(url); }
+    else if (file) { rawText = await file.text(); isSrt = file.name.toLowerCase().endsWith('.srt'); }
+  } catch { toast('⚠️ Subtitle blocked by CORS — try uploading the file directly'); return; }
 
   if (!rawText) { toast('⚠️ Empty subtitle file'); return; }
-
   const cues = isSrt ? parseSrt(rawText) : parseVtt(rawText);
   if (!cues.length) { toast('⚠️ No cues found in subtitle file'); return; }
-  
+
   lastCues = cues;
   loadCuesIntoTrack(cues);
+  renderCueList();
+  toast('✓ Subtitles loaded — ' + cues.length + ' cues');
+
+  // Open pane if collapsed
+  syncPane.classList.remove('collapsed');
 }
 
 /* ── LOAD VIDEO ── */
 function loadVideo() {
   const url = document.getElementById('url').value.trim();
   if (!url) { toast('Paste a video URL first'); return; }
-
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
-  clearTracks();
+  clearTracks(); lastCues = []; activeCueIdx = -1;
   captionsVisible = false;
   btnCaptions.classList.remove('captions-on');
-
-  // NOTE: We intentionally never set crossorigin="anonymous" on the video
-  // element. Doing so mid-stream forces a CORS re-request of the video src.
-  // Our subtitle pipeline (addTextTrack + VTTCue) never needs it.
+  renderCueList();
+  document.getElementById('previewBox').textContent = 'no subtitle active';
+  document.getElementById('previewBox').classList.add('empty');
 
   const isHLS = /\.m3u8/i.test(url) || url.includes('m3u8');
-
   if (isHLS && Hls.isSupported()) {
     hlsInstance = new Hls({ enableWorker: true });
-    hlsInstance.loadSource(url);
-    hlsInstance.attachMedia(videoEl);
-    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => { videoEl.play().catch(() => {}); });
-    hlsInstance.on(Hls.Events.ERROR, (_, data) => { if (data.fatal) toast('⚠️ Stream error: ' + data.type); });
+    hlsInstance.loadSource(url); hlsInstance.attachMedia(videoEl);
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play().catch(()=>{}));
+    hlsInstance.on(Hls.Events.ERROR, (_,data) => { if (data.fatal) toast('⚠️ Stream error: '+data.type); });
   } else if (isHLS && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-    videoEl.src = url; videoEl.load(); videoEl.play().catch(() => {});
+    videoEl.src=url; videoEl.load(); videoEl.play().catch(()=>{});
   } else {
-    videoEl.src = url; videoEl.load(); videoEl.play().catch(() => {});
+    videoEl.src=url; videoEl.load(); videoEl.play().catch(()=>{});
   }
 
   try {
-    document.getElementById('metaTitle').textContent =
-      decodeURIComponent(url.split('/').pop().split('?')[0]) || 'Video';
+    document.getElementById('metaTitle').textContent = decodeURIComponent(url.split('/').pop().split('?')[0]) || 'Video';
     document.getElementById('metaSub').textContent = new URL(url).hostname;
-  } catch (_) {
-    document.getElementById('metaTitle').textContent = 'Video';
-    document.getElementById('metaSub').textContent = url;
-  }
+  } catch(_) { document.getElementById('metaTitle').textContent='Video'; document.getElementById('metaSub').textContent=url; }
 
   overlay.classList.add('hidden');
   toast('▶ Loading…');
 }
 
 /* ── FILE LABEL ── */
-document.getElementById('subFile').addEventListener('change', function () {
-  const n = this.files[0]?.name;
-  document.getElementById('fileLabel').textContent = n ? (n.length > 18 ? n.slice(0, 16) + '…' : n) : 'Upload file';
+document.getElementById('subFile').addEventListener('change', function() {
+  const n=this.files[0]?.name;
+  document.getElementById('fileLabel').textContent = n ? (n.length>18 ? n.slice(0,16)+'…' : n) : 'Upload file';
 });
 
-document.getElementById('subDelayPlus').addEventListener('click', e => {
-  e.stopPropagation();
-  subtitleOffset += 0.5;
-  applySubtitleOffset();
+/* ════════════════════════════════
+   PANE CONTROLS
+   ════════════════════════════════ */
+
+/* Offset ±0.5 buttons */
+document.getElementById('offsetPlus').addEventListener('click', e => {
+  e.stopPropagation(); subtitleOffset = Math.round((subtitleOffset + 0.5) * 10) / 10;
+  applySubtitleOffset(); renderCueList();
+});
+document.getElementById('offsetMinus').addEventListener('click', e => {
+  e.stopPropagation(); subtitleOffset = Math.round((subtitleOffset - 0.5) * 10) / 10;
+  applySubtitleOffset(); renderCueList();
 });
 
-document.getElementById('subDelayMinus').addEventListener('click', e => {
-  e.stopPropagation();
-  subtitleOffset -= 0.5;
-  applySubtitleOffset();
+/* Fine slider */
+document.getElementById('fineSlider').addEventListener('input', function() {
+  subtitleOffset = Math.round(parseFloat(this.value) * 10) / 10;
+  updateOffsetUI();
+  const pct = ((parseFloat(this.value) + 5) / 10) * 100;
+  this.style.background = `linear-gradient(to right, var(--red) ${pct}%, rgba(255,255,255,.2) ${pct}%)`;
+  applySubtitleOffset(); renderCueList();
+});
+
+/* Snap to now: find next cue, compute offset so it starts at current video time */
+document.getElementById('btnAutoSync').addEventListener('click', () => {
+  if (!lastCues.length) { toast('Load subtitles first'); return; }
+  const t = videoEl.currentTime;
+  // Find next cue after current time (without offset)
+  let targetCue = null;
+  for (const c of lastCues) {
+    if (c.start > t - subtitleOffset) { targetCue = c; break; }
+  }
+  if (!targetCue) targetCue = lastCues[0]; // fallback to first
+  subtitleOffset = Math.round((t - targetCue.start) * 10) / 10;
+  applySubtitleOffset(); renderCueList();
+  toast(`⚡ Snapped: next cue offset ${subtitleOffset>0?'+':''}${subtitleOffset.toFixed(1)}s`);
+});
+
+/* Reset */
+document.getElementById('btnReset').addEventListener('click', () => {
+  subtitleOffset = 0;
+  applySubtitleOffset(); renderCueList();
+  toast('↺ Offset reset to 0');
+});
+
+/* Export SRT with adjusted timestamps */
+document.getElementById('btnExportSrt').addEventListener('click', () => {
+  if (!lastCues.length) { toast('No subtitles to export'); return; }
+  let srt = '';
+  lastCues.forEach((cue, i) => {
+    const s = Math.max(0, cue.start + subtitleOffset);
+    const e = Math.max(s + 0.001, cue.end + subtitleOffset);
+    srt += `${i+1}\n${fmtSrtTime(s)} --> ${fmtSrtTime(e)}\n${cue.text}\n\n`;
+  });
+  const blob = new Blob([srt], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'subtitles_synced.srt';
+  a.click();
+  toast('↓ Exported synced SRT');
 });
 
 /* ── KEYBOARD SHORTCUTS ── */
-document.getElementById('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadVideo(); });
-document.getElementById('subUrl').addEventListener('keydown', e => { if (e.key === 'Enter') addSubtitle(); });
+document.getElementById('url').addEventListener('keydown', e => { if (e.key==='Enter') loadVideo(); });
+document.getElementById('subUrl').addEventListener('keydown', e => { if (e.key==='Enter') addSubtitle(); });
 document.addEventListener('keydown', e => {
-  if (e.key === ']') {
-    subtitleOffset += 0.5;
-    applySubtitleOffset();
-  }
-  if (e.key === '[') {
-    subtitleOffset -= 0.5;
-    applySubtitleOffset();
-  }
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key===']') { subtitleOffset=Math.round((subtitleOffset+0.5)*10)/10; applySubtitleOffset(); renderCueList(); }
+  if (e.key==='[') { subtitleOffset=Math.round((subtitleOffset-0.5)*10)/10; applySubtitleOffset(); renderCueList(); }
 });
 </script>
 </body>
