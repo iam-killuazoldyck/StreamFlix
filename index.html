@@ -270,6 +270,8 @@ main { max-width:75%; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw
               <svg id="iconFs" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
               <svg id="iconExit" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
             </button>
+            <button class="ctrl-btn" id="subDelayMinus" title="Subtitle delay -0.5s">−</button>
+            <button class="ctrl-btn" id="subDelayPlus" title="Subtitle delay +0.5s">+</button>
           </div>
         </div>
 
@@ -283,6 +285,7 @@ main { max-width:75%; margin:0 auto; padding:clamp(16px,4vw,36px) clamp(12px,4vw
           <div class="speed-opt" data-speed="1.5">1.5×</div>
           <div class="speed-opt" data-speed="2">2×</div>
         </div>
+        
       </div>
 
       <div class="skip-flash" id="skipFlash"></div>
@@ -448,21 +451,8 @@ document.addEventListener('fullscreenchange', () => {
   document.getElementById('iconExit').style.display = fs ? '' : 'none';
 });
 
-/* ══════════════════════════════════════════════════════════════════════════
-   SUBTITLES — programmatic TextTrack approach
-   ──────────────────────────────────────────────────────────────────────────
-   WHY: Adding crossorigin="anonymous" to <video> AFTER a src is already
-   loaded causes the browser to re-issue the video request with an Origin
-   header, breaking servers that don't send CORS headers.
-
-   FIX: Use videoEl.addTextTrack() + VTTCue objects instead of a
-   <track src=blob:…> element. The browser never fetches an external URL
-   for the track, so it never needs crossorigin on the <video> element.
-   The playing stream is completely undisturbed.
-   ══════════════════════════════════════════════════════════════════════════ */
-
-// Active programmatic TextTrack reference (so we can clear cues on reload)
 let programmaticTrack = null;
+let subtitleOffset = 0; // seconds (+ forward, - backward)
 
 function clearTracks() {
   // Remove any legacy <track> elements
@@ -524,17 +514,45 @@ function parseVtt(raw) {
 
 /* ── Inject cues via addTextTrack (no crossorigin needed) ── */
 function loadCuesIntoTrack(cues) {
-  // addTextTrack creates a live TextTrack directly on the element.
-  // No src= attribute, no network fetch, no crossorigin requirement.
   const track = videoEl.addTextTrack('subtitles', 'Subtitle', 'en');
   for (const { start, end, text } of cues) {
-    try { track.addCue(new VTTCue(start, end, text)); } catch (_) {}
+    try {
+      track.addCue(new VTTCue(
+        start + subtitleOffset,
+        end + subtitleOffset, 
+        text
+      )); 
+    } catch (_) {}
   }
   track.mode = 'showing';
   programmaticTrack = track;
   captionsVisible = true;
   btnCaptions.classList.add('captions-on');
   toast('✓ Subtitles loaded');
+}
+let lastCues = [];
+
+function applySubtitleOffset() {
+  if (!lastCues.length) return;
+
+  clearTracks();
+
+  const track = videoEl.addTextTrack('subtitles', 'Subtitle', 'en');
+
+  for (const { start, end, text } of lastCues) {
+    try {
+      track.addCue(new VTTCue(
+        start + subtitleOffset,
+        end + subtitleOffset,
+        text
+      ));
+    } catch (_) {}
+  }
+
+  track.mode = captionsVisible ? 'showing' : 'hidden';
+  programmaticTrack = track;
+
+  toast(`⏱ Subtitle offset: ${subtitleOffset > 0 ? '+' : ''}${subtitleOffset.toFixed(1)}s`);
 }
 
 /* ── CORS-fallback fetch for subtitle URLs ── */
@@ -581,7 +599,8 @@ async function addSubtitle() {
 
   const cues = isSrt ? parseSrt(rawText) : parseVtt(rawText);
   if (!cues.length) { toast('⚠️ No cues found in subtitle file'); return; }
-
+  
+  lastCues = cues;
   loadCuesIntoTrack(cues);
 }
 
@@ -632,9 +651,31 @@ document.getElementById('subFile').addEventListener('change', function () {
   document.getElementById('fileLabel').textContent = n ? (n.length > 18 ? n.slice(0, 16) + '…' : n) : 'Upload file';
 });
 
+document.getElementById('subDelayPlus').addEventListener('click', e => {
+  e.stopPropagation();
+  subtitleOffset += 0.5;
+  applySubtitleOffset();
+});
+
+document.getElementById('subDelayMinus').addEventListener('click', e => {
+  e.stopPropagation();
+  subtitleOffset -= 0.5;
+  applySubtitleOffset();
+});
+
 /* ── KEYBOARD SHORTCUTS ── */
 document.getElementById('url').addEventListener('keydown', e => { if (e.key === 'Enter') loadVideo(); });
 document.getElementById('subUrl').addEventListener('keydown', e => { if (e.key === 'Enter') addSubtitle(); });
+document.addEventListener('keydown', e => {
+  if (e.key === ']') {
+    subtitleOffset += 0.5;
+    applySubtitleOffset();
+  }
+  if (e.key === '[') {
+    subtitleOffset -= 0.5;
+    applySubtitleOffset();
+  }
+});
 </script>
 </body>
 </html>
