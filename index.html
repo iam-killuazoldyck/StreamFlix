@@ -459,7 +459,7 @@ function clearTracks() { videoEl.querySelectorAll('track').forEach(t => t.remove
 async function fetchSubText(url) {
   const attempts = [
     () => fetch(url),                                                                     // 1. direct
-    () => fetch(`https://proxy.corsfix.com/?${encodeURIComponent(url)}`),                 // 2. corsfix.com
+    () => fetch(`https://proxy.corsfix.com/?${url}`),                 // 2. corsfix.com
     () => fetch(`https://crossorigin.me/${encodeURIComponent(url)}`),                     // 3. crossorigin.me
     () => fetch(`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`),   // 4. codetabs.com
   ];
