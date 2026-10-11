@@ -1,0 +1,7 @@
+{
+  "name": "streamflix",
+  "private": true,
+  "description": "StreamFlix web player. Dev dependency is only used by tests/harness.js",
+  "scripts": { "test:pipeline": "node tests/harness.js tests/sample.zip /tmp/out.mp4 1" },
+  "devDependencies": { "@ffmpeg/core": "0.12.10" }
+}

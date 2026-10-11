@@ -1,89 +1,48 @@
-# Netlify functions — Online Media Player / Seedr bridge
+# StreamFlix: in-browser streaming remux player
 
-These functions live in the separate Netlify client project. They call the existing Vercel API and keep its API key out of browser code.
+No backend. Everything runs in the browser and the site is static.
 
-## Functions
+## Pipeline
 
-- `POST /.netlify/functions/media-download` — converts the JSON body fields into query parameters (e.g. `{ "url": "…" }` becomes `?url=…`) and calls `POST https://flix-player-pi.vercel.app/tasks/url-downloads` with `X-API-Key`, then returns `{ "success": true, "task_id": 123 }`.
-- `GET /.netlify/functions/media-status?task_id=123` — checks `GET /tasks/{id}`. While processing it returns HTTP `202` with progress. When finished it gets the folder, retrieves each file's temporary download URL, and returns `ready: true`.
-
-## Netlify environment variables
-
-Set these in **Netlify → Site configuration → Environment variables**:
-
-- `ONLINE_MEDIA_PLAYER_API_KEY` — the API key accepted by your Vercel API as `X-API-Key`. Do not prefix it with `VITE_`, `NEXT_PUBLIC_`, or another public-client prefix.
-- `ALLOWED_ORIGIN` — optional; set to your exact frontend origin, e.g. `https://your-player.example.com`. It defaults to `*`; for production, set a specific origin.
-
-Redeploy after changing environment variables.
-
-## Frontend flow
-
-```js
-// 1. Start task. Send the exact JSON shape expected by your Vercel endpoint.
-const startResponse = await fetch("/.netlify/functions/media-download", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    // Replace these example keys with the actual /tasks/url-downloads request schema.
-    url: "https://example.com/video.mp4"
-  })
-});
-const start = await startResponse.json();
-if (!startResponse.ok || !start.success) throw new Error(start.error || "Could not start download");
-
-// 2. Poll until ready.
-async function waitForMedia(taskId) {
-  for (;;) {
-    const response = await fetch(
-      `/.netlify/functions/media-status?task_id=${encodeURIComponent(taskId)}`
-    );
-    const result = await response.json();
-
-    if (response.status === 202 && result.success && !result.ready) {
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      continue;
-    }
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || "Could not retrieve download URL");
-    }
-    return result; // result.url for a single file; result.files for multiple files
-  }
-}
-
-const media = await waitForMedia(start.task_id);
-console.log(media.url || media.files);
+```
+HTTP Range ──► ZIP directory ──► Range-stream member ──► deflate-raw ──► ring buffer
+ (ingest worker, with auto-resume)   (DecompressionStream)          (SharedArrayBuffer)
+                                                                           │ blocking read
+                                                                     FFmpeg.wasm pipe:0
+                                                                     -c:v copy -c:a aac
+                                                                     fragmented MP4 on pipe:1
+                                                                           │
+                                             ┌─────────────────────────────┴────────────┐
+                                             ▼                                          ▼
+                                   OPFS file (Save MP4)                      MediaSource (live playback)
 ```
 
-The loop above is illustrative; in a UI, use a cancellable timer and handle component unmounts.
+Every stage runs concurrently. A full ring buffer blocks the downloader, and un-acknowledged MP4 output blocks FFmpeg, so memory stays bounded (≈16 MB ring + ≤24 MB output in flight + the playback buffer).
 
-## Important API contract note
+| File | Role |
+| --- | --- |
+| `pipeline/ingest.worker.js` | Range requests, ZIP/ZIP64 directory parsing, resume on dropped connections, inflate, ring-buffer writer |
+| `pipeline/ffmpeg.worker.js` | Loads `@ffmpeg/core`, replaces fd 0/1 with ring-buffer reads and chunked writes (no `writeFile`/`readFile`), writes OPFS |
+| `pipeline/stream-pipeline.js` | Orchestration, MP4 init → MSE codec string, append queue, eviction, back-pressure acks, Save |
+| `tests/harness.js` | Runs both workers in Node against the real FFmpeg wasm (`npm i`, then `npm run test:pipeline`) |
 
-The supplied examples establish the response shapes and endpoint paths, but do not establish the exact JSON **request body** accepted by `POST /tasks/url-downloads`. `media-download` intentionally forwards the body unchanged. Match its frontend JSON to the schema implemented by that Vercel endpoint, including the expected shape for video and subtitle URL inputs.
+FFmpeg command: `-i pipe:0 -map 0:v:0 -map 0:a:0? -sn -dn -c:v copy -c:a aac -b:a 192k -ac 2 -avoid_negative_ts make_zero -f mp4 -movflags +frag_keyframe+empty_moov+default_base_moof pipe:1`
 
-## Why two functions?
+## Modes (dropdown under the URL box)
 
-The initial POST should return promptly with a task ID. Seedr's transfer may take longer than a single serverless request's execution window. The frontend can poll `media-status`; each invocation checks current state and only proceeds to folder/file/download lookups once the task is finished.
+- **Auto**: `.zip` URLs go to the streaming pipeline. Everything else plays directly, and if direct playback fails it falls back to the pipeline.
+- **Direct only**: the original player (MP4/WebM/HLS).
+- **Streaming remux**: always uses the pipeline (ZIP containing a video, or a raw MKV URL).
 
-## Local development
+## Requirements and limits
 
-Install Netlify CLI and run:
+- **Source server:** must send CORS headers. For ZIPs it must also support `Range` requests, allow the `Range` header in `Access-Control-Allow-Headers`, and ideally expose `Content-Range` (needed only for total size). Without a backend there is no way around CORS.
+- **Browser:** needs cross-origin isolation (`netlify.toml` sets COOP/COEP `credentialless`), `DecompressionStream`, MediaSource and OPFS. This means Chrome/Edge 103+ or Firefox 113+. Safari lacks `credentialless`, and iPhone Safari has no MediaSource, so the pipeline is unavailable there and direct playback still works.
+- **ZIP:** Store and Deflate only, no encryption. The largest video file in the archive is chosen (`entryName` option forces one). ZIP64 is supported.
+- **Streaming caveats:** MKVs that need data from the end of the file (e.g. a late index) may fail or buffer. Video is copied as-is, so the browser must be able to decode the codec (H.264/AAC is safest). Audio is always transcoded to stereo AAC, and embedded subtitle tracks are dropped (use the subtitle box).
+- **Seeking:** you can seek within data already buffered. Data older than ~10 s behind the playhead may be evicted if the browser's buffer quota is hit.
+- **FFmpeg core** loads from jsDelivr (≈30 MB, cached afterwards). To self-host, pass `coreBase` to `new StreamPipeline({...})`.
 
-```bash
-netlify dev
-```
+## Deploy
 
-The environment variables must be available to the local Netlify process. The functions use the Node.js built-in `fetch` API (Node 18+).
-
-## Frontend integration (`index.html`)
-
-The player has a **Playback mode** dropdown under the video URL box:
-
-- **Auto** (default): tries the URL directly; if the `<video>` element errors or HLS hits a fatal error, it automatically falls back to cloud fetch.
-- **Direct only**: original behaviour.
-- **Cloud fetch**: always sends the link to `media-download`, polls `media-status`, then plays the returned temporary URL.
-
-If the finished task contains several files, a file picker is shown; any `.srt` / `.vtt` in the folder is loaded as subtitles automatically.
-
-The request body sent to `media-download` is built by `buildTaskBody(url)` in `index.html` (currently `{ "url": url }`). Change that one function if your Vercel schema expects different fields.
-
-`FUNCTIONS_BASE` (default `/.netlify/functions`) can be set to your full Netlify site URL if the frontend is hosted elsewhere; in that case also set `ALLOWED_ORIGIN`.
+Static site on Netlify. `netlify.toml` only sets the isolation headers. The old Netlify functions and `ONLINE_MEDIA_PLAYER_API_KEY` are no longer needed, so you can delete that variable.

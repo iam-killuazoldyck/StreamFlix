@@ -1,5 +1,12 @@
-[build]
-  functions = "netlify/functions"
+# Static site only: no Netlify functions are used any more.
+# Cross-origin isolation is required for SharedArrayBuffer, which the
+# streaming pipeline uses to connect the download/inflate worker to FFmpeg.
+# "credentialless" keeps ordinary cross-origin <video>/<script> loads working
+# (Chrome/Edge/Firefox). Safari does not support it, so the streaming mode is
+# unavailable there, while direct playback still works.
 
-[functions]
-  node_bundler = "esbuild"
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "credentialless"

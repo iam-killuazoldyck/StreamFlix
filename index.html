@@ -464,7 +464,7 @@ main {
 #toast { position:fixed; bottom:clamp(16px,4vw,28px); left:50%; transform:translateX(-50%) translateY(20px); background:rgba(30,30,30,.95); border:1px solid var(--border); backdrop-filter:blur(10px); padding:10px 18px; border-radius:40px; font-size:13px; color:var(--text); opacity:0; transition:opacity .25s,transform .25s; pointer-events:none; white-space:nowrap; z-index:200; }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
-/* ── CLOUD FETCH ── */
+/* ── STREAMING PIPELINE STATUS ── */
 .cloud-opts { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--muted); }
 .mode-select { background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 10px; font-family:'DM Sans',sans-serif; font-size:13px; outline:none; cursor:pointer; max-width:100%; }
 .mode-select:focus { border-color:var(--red); }
@@ -481,11 +481,6 @@ main {
 .cloud-bar.indeterminate .cloud-bar-fill { width:35%; animation:cloudSlide 1.2s ease-in-out infinite; }
 @keyframes cloudSlide { 0% { margin-left:-35%; } 100% { margin-left:100%; } }
 
-.file-picker { display:none; flex-direction:column; gap:4px; max-height:180px; overflow-y:auto; }
-.file-picker.show { display:flex; }
-.file-picker-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:2px; }
-.file-pick { text-align:left; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:8px 10px; font-size:12px; font-family:'DM Sans',sans-serif; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.file-pick:hover { border-color:var(--red); background:rgba(229,9,20,.08); }
 
 /* ── RESPONSIVE ── */
 @media (max-width:700px) {
@@ -527,21 +522,22 @@ main {
       <div class="cloud-opts">
         <label for="modeSelect">Playback mode</label>
         <select id="modeSelect" class="mode-select">
-          <option value="auto">Auto: direct, then cloud fallback</option>
+          <option value="auto">Auto: direct, ZIP/fallback → streaming remux</option>
           <option value="direct">Direct only</option>
-          <option value="cloud">Cloud fetch (non-streamable links)</option>
+          <option value="stream">Streaming remux (ZIP / MKV → MP4)</option>
         </select>
       </div>
 
       <div class="cloud-status" id="cloudStatus">
         <div class="cloud-status-row" id="cloudStatusRow">
           <span class="cloud-status-text" id="cloudStatusText">Starting…</span>
-          <button class="cloud-cancel" id="cloudCancel">Cancel</button>
+          <span style="display:flex;gap:6px;flex-shrink:0">
+            <button class="cloud-cancel" id="cloudSave" style="display:none">Save MP4</button>
+            <button class="cloud-cancel" id="cloudCancel">Cancel</button>
+          </span>
         </div>
         <div class="cloud-bar indeterminate" id="cloudBar"><div class="cloud-bar-fill" id="cloudBarFill"></div></div>
       </div>
-
-      <div class="file-picker" id="filePicker"></div>
     </div>
 
     <!-- SUBTITLES -->
@@ -738,7 +734,7 @@ main {
 
     <!-- TIPS -->
     <div class="tips">
-      <div class="tip"><div class="tip-icon">🎬</div><div><strong>Supported formats</strong>MP4, WebM, OGG, HLS, plus any link via Cloud fetch</div></div>
+      <div class="tip"><div class="tip-icon">🎬</div><div><strong>Supported formats</strong>MP4, WebM, OGG, HLS, plus ZIP/MKV streamed &amp; remuxed in-browser</div></div>
       <div class="tip"><div class="tip-icon">💬</div><div><strong>Subtitles</strong>Paste a .vtt/.srt URL or upload from device</div></div>
       <div class="tip"><div class="tip-icon">⚡</div><div><strong>Snap to now</strong>Auto-aligns next cue to current playhead</div></div>
       <div class="tip"><div class="tip-icon">⌨️</div><div><strong>Keyboard</strong>Space play/pause · ←/→ ±10s · F fullscreen · C captions · [/] sub sync</div></div>
@@ -750,6 +746,7 @@ main {
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+<script src="pipeline/stream-pipeline.js"></script>
 
 <script>
 const videoEl   = document.getElementById('player');
@@ -1161,66 +1158,58 @@ async function addSubtitle() {
 }
 
 /* ════════════════════════════════
-   LOAD VIDEO  (direct + cloud fetch)
+   LOAD VIDEO  (direct + streaming remux pipeline)
    ════════════════════════════════ */
 
-const FUNCTIONS_BASE = '/.netlify/functions';
-const POLL_MS         = 2500;
-const POLL_TIMEOUT_MS = 15 * 60 * 1000;   // give up after 15 min
-const VIDEO_EXT = /\.(mp4|m4v|webm|mkv|mov|avi|ogv|ogg|m3u8|ts)$/i;
-const SUB_EXT   = /\.(srt|vtt)$/i;
+const ZIP_URL = /\.zip(\?|#|$)/i;
 
 const modeSelect      = document.getElementById('modeSelect');
-const cloudStatus     = document.getElementById('cloudStatus');
-const cloudStatusRow  = document.getElementById('cloudStatusRow');
-const cloudStatusText = document.getElementById('cloudStatusText');
-const cloudBar        = document.getElementById('cloudBar');
-const cloudBarFill    = document.getElementById('cloudBarFill');
-const filePicker      = document.getElementById('filePicker');
+const pipeStatus      = document.getElementById('cloudStatus');
+const pipeStatusRow   = document.getElementById('cloudStatusRow');
+const pipeStatusText  = document.getElementById('cloudStatusText');
+const pipeBar         = document.getElementById('cloudBar');
+const pipeBarFill     = document.getElementById('cloudBarFill');
+const pipeCancel      = document.getElementById('cloudCancel');
+const pipeSave        = document.getElementById('cloudSave');
 
-let loadSeq       = 0;     // bumps on every new load; stale async work checks it
-let cloudAbort    = null;  // AbortController for the in-flight cloud task
+let loadSeq       = 0;     // bumps on every new load; stale callbacks check it
+let pipeline      = null;  // active StreamPipeline
 let directAttempt = null;  // { url, seq } while a direct attempt may still fall back
 
-/* >>> If your Vercel /tasks/url-downloads schema differs, change ONLY this. <<< */
-function buildTaskBody(url) {
-  return { url };
-}
-
-const sleep = (ms, signal) => new Promise((resolve, reject) => {
-  const t = setTimeout(resolve, ms);
-  signal.addEventListener('abort', () => {
-    clearTimeout(t);
-    reject(new DOMException('Aborted', 'AbortError'));
-  }, { once: true });
-});
+const mb = (n) => (n / 1048576).toFixed(n > 1e8 ? 0 : 1) + ' MB';
 
 /* ── status panel ── */
-function setCloudStatus(text, pct, isError) {
-  cloudStatus.classList.add('show');
-  cloudStatusText.textContent = text;
-  cloudStatusRow.classList.toggle('error', !!isError);
-  document.getElementById('cloudCancel').textContent = isError ? 'Dismiss' : 'Cancel';
+function setPipeStatus(text, pct, isError) {
+  pipeStatus.classList.add('show');
+  pipeStatusText.textContent = text;
+  pipeStatusText.title = text;
+  pipeStatusRow.classList.toggle('error', !!isError);
+  pipeCancel.textContent = isError ? 'Dismiss' : 'Cancel';
   const determinate = typeof pct === 'number' && isFinite(pct);
-  cloudBar.classList.toggle('indeterminate', !determinate && !isError);
-  cloudBar.style.display = isError ? 'none' : '';
-  cloudBarFill.style.width = determinate ? Math.max(0, Math.min(100, pct)) + '%' : '';
+  pipeBar.classList.toggle('indeterminate', !determinate && !isError);
+  pipeBar.style.display = isError ? 'none' : '';
+  pipeBarFill.style.width = determinate ? Math.max(0, Math.min(100, pct)) + '%' : '';
 }
-function hideCloudStatus() { cloudStatus.classList.remove('show'); }
-function hidePicker() { filePicker.classList.remove('show'); filePicker.innerHTML = ''; }
+function hidePipeStatus() { pipeStatus.classList.remove('show'); pipeSave.style.display = 'none'; }
 
-function cancelCloud() {
-  if (cloudAbort) { cloudAbort.abort(); cloudAbort = null; }
-  hideCloudStatus();
+function stopPipeline() {
+  if (pipeline) { pipeline.abort(); pipeline = null; }
 }
-document.getElementById('cloudCancel').addEventListener('click', () => {
-  loadSeq++;               // invalidate any pending work
-  cancelCloud();
-  toast('Cloud fetch cancelled');
+pipeCancel.addEventListener('click', () => {
+  loadSeq++;
+  const wasRunning = !!pipeline;
+  stopPipeline();
+  hidePipeStatus();
+  if (wasRunning) { resetForNewSource(); toast('Streaming cancelled'); }
+});
+pipeSave.addEventListener('click', async () => {
+  if (!pipeline) return;
+  try { await pipeline.save(); } catch (e) { toast('⚠️ Could not save: ' + e.message); }
 });
 
 /* ── reset player state for a new source ── */
 function resetForNewSource() {
+  stopPipeline();
   if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
   videoEl.pause();
   videoEl.removeAttribute('src');
@@ -1235,7 +1224,7 @@ function resetForNewSource() {
 }
 
 /* ── direct playback ── */
-function playUrl(url, { fallback = false, title = null, via = null } = {}) {
+function playUrl(url, { fallback = false } = {}) {
   resetForNewSource();
   directAttempt = fallback ? { url, seq: loadSeq } : null;
 
@@ -1246,124 +1235,81 @@ function playUrl(url, { fallback = false, title = null, via = null } = {}) {
     hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play().catch(() => {}));
     hlsInstance.on(Hls.Events.ERROR, (_, data) => {
       if (!data.fatal) return;
-      if (!tryCloudFallback()) toast('⚠️ Stream error: ' + data.type);
+      if (!tryPipelineFallback()) toast('⚠️ Stream error: ' + data.type);
     });
   } else {
     videoEl.src = url; videoEl.load(); videoEl.play().catch(() => {});
   }
 
   try {
-    document.getElementById('metaTitle').textContent =
-      title || decodeURIComponent(url.split('/').pop().split('?')[0]) || 'Video';
-    document.getElementById('metaSub').textContent = via || new URL(url).hostname;
+    document.getElementById('metaTitle').textContent = decodeURIComponent(url.split('/').pop().split('?')[0]) || 'Video';
+    document.getElementById('metaSub').textContent = new URL(url).hostname;
   } catch (_) {
-    document.getElementById('metaTitle').textContent = title || 'Video';
-    document.getElementById('metaSub').textContent = via || url;
+    document.getElementById('metaTitle').textContent = 'Video';
+    document.getElementById('metaSub').textContent = url;
   }
 
   overlay.classList.add('hidden');
   toast('▶ Loading…');
 }
 
-/* ── automatic fallback to cloud ── */
-function tryCloudFallback() {
+/* ── streaming remux pipeline ── */
+function startPipeline(url, seq) {
+  resetForNewSource();
+  directAttempt = null;
+  overlay.classList.remove('hidden');
+  document.getElementById('metaTitle').textContent = 'Preparing stream…';
+  document.getElementById('metaSub').textContent = 'Streaming remux';
+  setPipeStatus('Starting pipeline…', null);
+
+  const live = () => seq === loadSeq;
+  const p = new StreamPipeline({
+    onStatus:   (t) => live() && setPipeStatus(t, undefined),
+    onEntry:    (e) => { if (!live()) return; document.getElementById('metaTitle').textContent = e.name.split('/').pop(); },
+    onProgress: (m) => {
+      if (!live()) return;
+      const pct = m.total ? (m.fetched / m.total) * 100 : null;
+      setPipeStatus(`Downloading ${mb(m.fetched)}${m.total ? ' / ' + mb(m.total) : ''} · decompressed ${mb(m.written)}`, pct);
+    },
+    onPlayable: (i) => {
+      if (!live()) return;
+      overlay.classList.add('hidden');
+      document.getElementById('metaSub').textContent = 'Streaming remux · ' + i.codecs.join(' + ');
+      toast('▶ Playing while still downloading');
+    },
+    onDone: (i) => {
+      if (!live() || i.aborted) return;
+      setPipeStatus('Finished · MP4 ready (' + mb(i.bytes) + ')', 100);
+      pipeSave.style.display = '';
+    },
+    onError: (msg) => {
+      if (!live()) return;
+      setPipeStatus('⚠️ ' + msg, null, true);
+      document.getElementById('metaTitle').textContent = 'No video loaded';
+      pipeline = null;
+    },
+  });
+  pipeline = p;
+  p.start(url, videoEl).catch((err) => {
+    if (!live()) return;
+    setPipeStatus('⚠️ ' + err.message, null, true);
+    document.getElementById('metaTitle').textContent = 'No video loaded';
+    pipeline = null;
+  });
+}
+
+/* ── automatic fallback: direct playback failed → try the pipeline ── */
+function tryPipelineFallback() {
   if (!directAttempt) return false;
   const { url, seq } = directAttempt;
   directAttempt = null;
   if (seq !== loadSeq) return false;
-  toast('Direct playback failed, trying cloud fetch…');
-  resetForNewSource();
-  loadViaCloud(url, seq);
+  toast('Direct playback failed, trying streaming remux…');
+  startPipeline(url, seq);
   return true;
 }
-videoEl.addEventListener('error', () => { tryCloudFallback(); });
+videoEl.addEventListener('error', () => { tryPipelineFallback(); });
 videoEl.addEventListener('loadeddata', () => { directAttempt = null; }); // direct worked
-
-/* ── cloud fetch ── */
-async function pollMedia(taskId, signal) {
-  const t0 = Date.now();
-  for (;;) {
-    if (Date.now() - t0 > POLL_TIMEOUT_MS) throw new Error('Timed out waiting for the cloud download');
-
-    const res  = await fetch(`${FUNCTIONS_BASE}/media-status?task_id=${encodeURIComponent(taskId)}`, { signal });
-    const data = await res.json().catch(() => ({}));
-
-    if ((res.ok || res.status === 202) && data.success) {
-      if (data.ready) return data;
-      const p = typeof data.progress === 'number' ? data.progress : parseFloat(data.progress);
-      setCloudStatus(
-        data.message || `Fetching to cloud… ${isFinite(p) ? Math.round(p) + '%' : (data.state || '')}`.trim(),
-        isFinite(p) ? p : null
-      );
-      await sleep(POLL_MS, signal);
-      continue;
-    }
-    throw new Error(data.error || 'Could not retrieve download URL');
-  }
-}
-
-async function loadViaCloud(url, seq) {
-  cancelCloud();
-  hidePicker();
-  const ctrl = new AbortController();
-  cloudAbort = ctrl;
-
-  overlay.classList.remove('hidden');
-  document.getElementById('metaTitle').textContent = 'Fetching in cloud…';
-  document.getElementById('metaSub').textContent = 'StreamFlix Player';
-  setCloudStatus('Sending link to cloud…', null);
-
-  try {
-    const res = await fetch(`${FUNCTIONS_BASE}/media-download`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildTaskBody(url)),
-      signal: ctrl.signal,
-    });
-    const start = await res.json().catch(() => ({}));
-    if (!res.ok || !start.success) throw new Error(start.error || 'Could not start cloud download');
-
-    const media = await pollMedia(start.task_id, ctrl.signal);
-    if (seq !== loadSeq) return;
-
-    hideCloudStatus();
-    handleCloudFiles(media.files || [], seq);
-  } catch (err) {
-    if (err.name === 'AbortError' || seq !== loadSeq) return;
-    setCloudStatus('⚠️ ' + err.message, null, true);
-    document.getElementById('metaTitle').textContent = 'No video loaded';
-  } finally {
-    if (cloudAbort === ctrl) cloudAbort = null;
-  }
-}
-
-function handleCloudFiles(files, seq) {
-  const subs   = files.filter(f => SUB_EXT.test(f.name || ''));
-  let   videos = files.filter(f => VIDEO_EXT.test(f.name || ''));
-  if (!videos.length) videos = files.filter(f => !SUB_EXT.test(f.name || ''));
-  if (!videos.length) { toast('⚠️ No playable video in the downloaded files'); return; }
-
-  const play = (file) => {
-    playUrl(file.url, { title: file.name, via: 'Cloud' });
-    if (subs.length) {
-      document.getElementById('subUrl').value = subs[0].url;
-      addSubtitle();   // best effort; falls back to CORS proxies
-    }
-  };
-
-  if (videos.length === 1) { play(videos[0]); return; }
-
-  filePicker.innerHTML = '<div class="file-picker-label">Choose a file to play</div>';
-  videos.forEach(f => {
-    const b = document.createElement('button');
-    b.className = 'file-pick';
-    b.textContent = f.name || 'media';
-    b.addEventListener('click', () => { hidePicker(); play(f); });
-    filePicker.appendChild(b);
-  });
-  filePicker.classList.add('show');
-  toast(`${videos.length} files ready, pick one`);
-}
 
 /* ── entry point (Play button / Enter key) ── */
 function loadVideo() {
@@ -1371,16 +1317,12 @@ function loadVideo() {
   if (!url) { toast('Paste a video URL first'); return; }
 
   const seq = ++loadSeq;
-  cancelCloud();
-  hidePicker();
+  stopPipeline();
+  hidePipeStatus();
 
   const mode = modeSelect.value;
-  if (mode === 'cloud') {
-    resetForNewSource();
-    loadViaCloud(url, seq);
-  } else {
-    playUrl(url, { fallback: mode === 'auto' });
-  }
+  if (mode === 'stream' || (mode === 'auto' && ZIP_URL.test(url))) startPipeline(url, seq);
+  else playUrl(url, { fallback: mode === 'auto' });
 }
 
 /* ── FILE LABEL ── */
