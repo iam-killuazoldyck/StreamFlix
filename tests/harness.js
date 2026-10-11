@@ -2,8 +2,9 @@ const { Worker } = require('worker_threads');
 const http = require('http'), fs = require('fs');
 const [,, file, outName, ringMB = '1'] = process.argv;
 const data = fs.readFileSync(file);
+const NORANGE = !!process.env.NORANGE, PROXY = !!process.env.PROXY;
 const srv = http.createServer((req, res) => {
-  const r = req.headers.range;
+  const r = NORANGE || (req.url.startsWith('/proxy') && !process.env.PROXY_RANGE) ? null : req.headers.range;
   if (!r) { res.writeHead(200, {'Content-Length': data.length}); return res.end(data); }
   let [, a, b] = /bytes=(\d*)-(\d*)/.exec(r);
   let s, e;
@@ -15,7 +16,9 @@ const srv = http.createServer((req, res) => {
   (function send(){ if (o >= part.length) return res.end(); res.write(part.subarray(o, o += 16384)); setImmediate(send); })();
 });
 srv.listen(0, async () => {
-  const url = `http://127.0.0.1:${srv.address().port}/f`;
+  const port = srv.address().port;
+  const url = PROXY ? 'http://127.0.0.1:1/blocked.zip' : `http://127.0.0.1:${port}/f`;
+  const proxy = PROXY ? `http://127.0.0.1:${port}/proxy?url=` : null;
   const RING = (+ringMB) * 1024 * 1024, OFF = 64;
   const sab = new SharedArrayBuffer(OFF + RING), h = new Int32Array(sab, 0, 16);
   const core = __dirname + '/../node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.js';
@@ -42,5 +45,5 @@ srv.listen(0, async () => {
   });
   ff.on('error', e => { console.log('ff worker err', e); end('x'); }); ing.on('error', e => { console.log('ing worker err', e); end('x'); });
   ff.postMessage({ type: 'start', sab, ringOffset: OFF, ringSize: RING, coreURL: core, wasmBinary, opfsName: null });
-  ing.postMessage({ type: 'start', sab, ringOffset: OFF, ringSize: RING, url });
+  ing.postMessage({ type: 'start', sab, ringOffset: OFF, ringSize: RING, url, proxy });
 });
