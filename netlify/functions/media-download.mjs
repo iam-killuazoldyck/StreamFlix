@@ -46,8 +46,6 @@ export async function handler(event) {
     return json(400, { success: false, error: "Request body must be valid JSON." });
   }
 
-  // Forward the frontend's JSON body unchanged so it matches the contract
-  // implemented by the Online Media Player API.
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return json(400, { success: false, error: "JSON body must be an object." });
   }
