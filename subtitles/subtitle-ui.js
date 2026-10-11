@@ -127,7 +127,7 @@
   /* ── events ── */
   el.toggle.addEventListener('click', () => {
     el.panel.hidden = !el.panel.hidden;
-    if (!el.panel.hidden) { syncProviderUi(); if (!el.query.value) prefill(); el.query.focus(); }
+    if (!el.panel.hidden) { syncProviderUi(); if (!el.query.value) prefill(); el.query.focus({ preventScroll: true }); }
   });
   el.provider.addEventListener('change', () => { syncProviderUi(); el.results.innerHTML = ''; setStatus(''); });
   el.lang.addEventListener('change', () => { store.set('subLang', el.lang.value); if (activeTitle && el.provider.value === 'opensubtitles' && el.titles.childElementCount + el.results.childElementCount) loadTitle(activeTitle); });
