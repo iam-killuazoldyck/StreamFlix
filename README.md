@@ -4,7 +4,7 @@ These functions live in the separate Netlify client project. They call the exist
 
 ## Functions
 
-- `POST /.netlify/functions/media-download` — forwards the JSON body to `POST https://flix-player-pi.vercel.app/tasks/url-downloads` with `X-API-Key`, then returns `{ "success": true, "task_id": 123 }`.
+- `POST /.netlify/functions/media-download` — converts the JSON body fields into query parameters (e.g. `{ "url": "…" }` becomes `?url=…`) and calls `POST https://flix-player-pi.vercel.app/tasks/url-downloads` with `X-API-Key`, then returns `{ "success": true, "task_id": 123 }`.
 - `GET /.netlify/functions/media-status?task_id=123` — checks `GET /tasks/{id}`. While processing it returns HTTP `202` with progress. When finished it gets the folder, retrieves each file's temporary download URL, and returns `ready: true`.
 
 ## Netlify environment variables
