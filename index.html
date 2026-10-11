@@ -1118,6 +1118,7 @@ function updatePaneTimestamps() {
 async function fetchSubText(url) {
   const attempts = [
     () => fetch(url),
+    () => fetch(`${CORS_PROXY}${encodeURIComponent(url)}`),
     () => fetch(`https://proxy.corsfix.com/?${url}`),
     () => fetch(`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`),
     () => fetch(`https://crossorigin.me/${encodeURIComponent(url)}`),
@@ -1161,6 +1162,7 @@ async function addSubtitle() {
    LOAD VIDEO  (direct + streaming remux pipeline)
    ════════════════════════════════ */
 
+const CORS_PROXY = 'https://flixplayer.bk1030798.workers.dev/?url=';   // your Cloudflare Worker; used only when the source blocks CORS
 const ZIP_URL = /\.zip(\?|#|$)/i;
 
 const modeSelect      = document.getElementById('modeSelect');
@@ -1264,6 +1266,7 @@ function startPipeline(url, seq) {
 
   const live = () => seq === loadSeq;
   const p = new StreamPipeline({
+    corsProxy: CORS_PROXY,
     onStatus:   (t) => live() && setPipeStatus(t, undefined),
     onEntry:    (e) => { if (!live()) return; document.getElementById('metaTitle').textContent = e.name.split('/').pop(); },
     onProgress: (m) => {
