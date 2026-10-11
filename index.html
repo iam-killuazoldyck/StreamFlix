@@ -464,6 +464,17 @@ main {
 #toast { position:fixed; bottom:clamp(16px,4vw,28px); left:50%; transform:translateX(-50%) translateY(20px); background:rgba(30,30,30,.95); border:1px solid var(--border); backdrop-filter:blur(10px); padding:10px 18px; border-radius:40px; font-size:13px; color:var(--text); opacity:0; transition:opacity .25s,transform .25s; pointer-events:none; white-space:nowrap; z-index:200; }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
+
+/* ── RESIZABLE PLAYER ── */
+.player-card { position:relative; width:var(--player-w,100%); max-width:100%; min-width:min(320px,100%); align-self:center; }
+.player-card.resizing { user-select:none; -webkit-user-select:none; }
+.player-card.resizing .player-wrapper { pointer-events:none; }
+.player-card.resizing .player-wrapper video { pointer-events:none; }
+.meta { padding-right:40px; }
+.resize-handle { position:absolute; right:6px; bottom:6px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; color:var(--muted); border-radius:6px; cursor:nwse-resize; touch-action:none; z-index:5; transition:color .15s,background .15s; }
+.resize-handle svg { width:14px; height:14px; }
+.resize-handle:hover, .resize-handle:focus-visible, .player-card.resizing .resize-handle { color:var(--text); background:rgba(255,255,255,.1); outline:none; }
+
 /* ── STREAMING PIPELINE STATUS ── */
 .cloud-opts { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--muted); }
 .mode-select { background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 10px; font-family:'DM Sans',sans-serif; font-size:13px; outline:none; cursor:pointer; max-width:100%; }
@@ -558,7 +569,7 @@ main {
     </div>
 
     <!-- PLAYER -->
-    <div class="player-card">
+    <div class="player-card" id="playerCard">
       <div class="player-wrapper" id="playerWrapper">
         <video id="player" playsinline></video>
 
@@ -641,6 +652,11 @@ main {
       <div class="meta">
         <div class="meta-title" id="metaTitle">No video loaded</div>
         <div class="meta-sub" id="metaSub">StreamFlix Player</div>
+      </div>
+
+      <div class="resize-handle" id="resizeHandle" role="slider" tabindex="0"
+           aria-label="Resize player" title="Drag to resize · double-click to reset · arrow keys adjust">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5L5 12M12 9l-3 3"/></svg>
       </div>
     </div>
 
@@ -1389,6 +1405,57 @@ document.getElementById('btnExportSrt').addEventListener('click', () => {
   a.click();
   toast('↓ Exported synced SRT');
 });
+
+/* ══════════════════════════════════════
+   RESIZABLE PLAYER
+   ══════════════════════════════════════ */
+(function () {
+  const card = document.getElementById('playerCard');
+  const handle = document.getElementById('resizeHandle');
+  const KEY = 'streamflix.playerWidthFrac';
+  const MIN = 320;
+  let frac = null;                                   // saved width as a fraction of the container
+
+  const containerW = () => card.parentElement.clientWidth;
+  function setWidth(px) {
+    const cw = containerW();
+    const w = Math.max(Math.min(MIN, cw), Math.min(cw, px));
+    card.style.setProperty('--player-w', w + 'px');
+    frac = w / cw;
+    return w;
+  }
+  function reset() {
+    card.style.removeProperty('--player-w'); frac = null;
+    try { localStorage.removeItem(KEY); } catch (_) {}
+  }
+  function save() { try { if (frac !== null) localStorage.setItem(KEY, frac.toFixed(4)); } catch (_) {} }
+
+  try { const f = parseFloat(localStorage.getItem(KEY)); if (f > 0 && f < 1) setWidth(f * containerW()); } catch (_) {}
+  window.addEventListener('resize', () => { if (frac !== null && frac < 0.995) setWidth(frac * containerW()); });
+
+  let startX = 0, startW = 0;
+  handle.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    handle.setPointerCapture(e.pointerId);
+    startX = e.clientX; startW = card.getBoundingClientRect().width;
+    card.classList.add('resizing');
+  });
+  handle.addEventListener('pointermove', e => {
+    if (!card.classList.contains('resizing')) return;
+    setWidth(startW + 2 * (e.clientX - startX));      // card is centred, so each edge moves by dx
+  });
+  const end = () => { if (card.classList.contains('resizing')) { card.classList.remove('resizing'); save(); } };
+  handle.addEventListener('pointerup', end);
+  handle.addEventListener('pointercancel', end);
+  handle.addEventListener('dblclick', () => { reset(); toast('Player size reset'); });
+  handle.addEventListener('keydown', e => {
+    if (['ArrowRight','ArrowLeft','ArrowUp','ArrowDown','Home','Escape'].includes(e.key)) e.stopPropagation();   // don't trigger ±10s seek
+    const step = e.shiftKey ? 120 : 40;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { setWidth(card.getBoundingClientRect().width + step); save(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { setWidth(card.getBoundingClientRect().width - step); save(); e.preventDefault(); }
+    else if (e.key === 'Home' || e.key === 'Escape') { reset(); e.preventDefault(); }
+  });
+})();
 
 /* ══════════════════════════════════════
    KEYBOARD SHORTCUTS
