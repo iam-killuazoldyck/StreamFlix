@@ -1155,7 +1155,12 @@ function highlightActiveCue() {
 
   if (newIdx !== -1) {
     const activeEl = list.querySelector(`.cue-item[data-idx="${newIdx}"]`);
-    if (activeEl) activeEl.scrollIntoView({ block:'nearest', behavior:'smooth' });
+    // Scroll only the cue list itself. scrollIntoView() would also scroll the whole page.
+    if (activeEl && list.clientHeight > 0) {
+      const lr = list.getBoundingClientRect(), er = activeEl.getBoundingClientRect();
+      if (er.top < lr.top) list.scrollTo({ top: list.scrollTop - (lr.top - er.top) - 4, behavior:'smooth' });
+      else if (er.bottom > lr.bottom) list.scrollTo({ top: list.scrollTop + (er.bottom - lr.bottom) + 4, behavior:'smooth' });
+    }
   }
 }
 
