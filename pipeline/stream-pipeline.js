@@ -127,6 +127,7 @@
         coreBase: DEFAULT_CORE,     // where ffmpeg-core.js / .wasm live (self-host to go offline)
         maxAheadSec: 90,            // don't buffer further ahead of the playhead than this
         entryName: null,            // force a specific file inside the ZIP
+        corsProxy: null,            // e.g. 'https://your-worker.example.workers.dev/?url=' (used only if direct fetch is blocked)
         onStatus() {}, onEntry() {}, onProgress() {}, onPlayable() {}, onDone() {}, onError() {},
       }, opts || {});
       this.opfsName = 'streamflix-' + Date.now() + '.mp4';
@@ -181,7 +182,7 @@
 
       const base = this.o.coreBase;
       this.ffmpeg.postMessage({ type: 'start', sab, ringOffset: OFF, ringSize, coreURL: base + 'ffmpeg-core.js', wasmURL: base + 'ffmpeg-core.wasm', opfsName: this.opfsName });
-      this.ingest.postMessage({ type: 'start', sab, ringOffset: OFF, ringSize, url, entryName: this.o.entryName });
+      this.ingest.postMessage({ type: 'start', sab, ringOffset: OFF, ringSize, url, entryName: this.o.entryName, proxy: this.o.corsProxy });
     }
 
     /* ── MediaSource ── */
