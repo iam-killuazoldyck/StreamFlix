@@ -23,6 +23,28 @@ function corsHeaders() {
   };
 }
 
+
+// FastAPI validation errors arrive as an array of { loc, msg, ... } objects.
+function errorText(data, fallback) {
+  const e = data?.detail ?? data?.error ?? data?.message;
+  if (Array.isArray(e)) {
+    return e.map(x => `${(x.loc || []).join(".")}: ${x.msg}`).join("; ") || fallback;
+  }
+  if (e && typeof e === "object") return JSON.stringify(e);
+  return e || fallback;
+}
+
+// The upstream endpoint reads its inputs from the query string
+// (e.g. ?url=...), so convert the frontend's JSON fields into query params.
+function buildQuery(body) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(body)) {
+    if (value === null || value === undefined || value === "") continue;
+    params.append(key, String(value));
+  }
+  return params.toString();
+}
+
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 204, headers: corsHeaders(), body: "" };
@@ -46,19 +68,20 @@ export async function handler(event) {
     return json(400, { success: false, error: "Request body must be valid JSON." });
   }
 
+  // Forward the frontend's JSON body unchanged so it matches the contract
+  // implemented by the Online Media Player API.
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     return json(400, { success: false, error: "JSON body must be an object." });
   }
 
   try {
-    const upstream = await fetch(`${UPSTREAM}/tasks/url-downloads`, {
+    const query = buildQuery(body);
+    const upstream = await fetch(`${UPSTREAM}/tasks/url-downloads${query ? `?${query}` : ""}`, {
       method: "POST",
       headers: {
-        "content-type": "application/json",
         "X-API-Key": apiKey,
         "accept": "application/json",
       },
-      body: JSON.stringify(body),
       signal: AbortSignal.timeout(20000),
     });
 
@@ -71,7 +94,7 @@ export async function handler(event) {
       console.error("Upstream task creation failed:", upstream.status);
       return json(upstream.status >= 400 && upstream.status < 600 ? upstream.status : 502, {
         success: false,
-        error: data.detail || data.error || data.message || "Could not create media download task.",
+        error: errorText(data, "Could not create media download task."),
       });
     }
 

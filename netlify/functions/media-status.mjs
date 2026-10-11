@@ -38,7 +38,8 @@ async function apiGet(path, apiKey) {
   catch { data = { message: raw.slice(0, 1000) }; }
 
   if (!response.ok) {
-    const error = new Error(data.detail || data.error || data.message || `Upstream request failed (${response.status}).`);
+    const detail = data.detail ?? data.error ?? data.message;
+    const error = new Error(Array.isArray(detail) ? detail.map(x => `${(x.loc || []).join(".")}: ${x.msg}`).join("; ") : (detail && typeof detail === "object" ? JSON.stringify(detail) : detail) || `Upstream request failed (${response.status}).`);
     error.statusCode = response.status;
     throw error;
   }
