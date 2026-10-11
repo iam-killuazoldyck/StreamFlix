@@ -24,6 +24,8 @@ Every stage runs concurrently. A full ring buffer blocks the downloader, and un-
 | `pipeline/ingest.worker.js` | Range requests, ZIP/ZIP64 directory parsing, resume on dropped connections, inflate, ring-buffer writer |
 | `pipeline/ffmpeg.worker.js` | Loads `@ffmpeg/core`, replaces fd 0/1 with ring-buffer reads and chunked writes (no `writeFile`/`readFile`), writes OPFS |
 | `pipeline/stream-pipeline.js` | Orchestration, MP4 init → MSE codec string, append queue, eviction, back-pressure acks, Save |
+| `subtitles/subtitle-core.js` | Subtitle providers (OpenSubtitles via the Stremio addon + Cinemeta title search, SubDL), title cleaning, encoding detection, ZIP/gzip unpacking |
+| `subtitles/subtitle-ui.js` | The "Search subtitles online" panel |
 | `tests/harness.js` | Runs both workers in Node against the real FFmpeg wasm (`npm i`, then `npm run test:pipeline`) |
 
 FFmpeg command: `-i pipe:0 -map 0:v:0 -map 0:a:0? -sn -dn -c:v copy -c:a aac -b:a 192k -ac 2 -avoid_negative_ts make_zero -f mp4 -movflags +frag_keyframe+empty_moov+default_base_moof pipe:1`
@@ -48,3 +50,18 @@ FFmpeg command: `-i pipe:0 -map 0:v:0 -map 0:a:0? -sn -dn -c:v copy -c:a aac -b:
 ## Deploy
 
 Static site on Netlify. `netlify.toml` only sets the isolation headers. The old Netlify functions and `ONLINE_MEDIA_PLAYER_API_KEY` are no longer needed, so you can delete that variable.
+
+## Subtitle search
+
+Click **🔎 Search subtitles online** under the Subtitles box. The query, season and episode are pre-filled from the loaded video's name (e.g. `Show.S02E05.1080p.mkv` → *Show*, season 2, episode 5).
+
+| Source | Key | Notes |
+| --- | --- | --- |
+| OpenSubtitles (via the public Stremio addon) | none | Title lookup through Cinemeta (movies and series, or paste an IMDb id like `tt0133093`). Series need season and episode. |
+| SubDL | free API key from subdl.com/panel/api (stored only in your browser's localStorage) | Season packs are unzipped and the matching episode file is picked. |
+
+Details:
+- Results are filtered by language; downloads are decoded as UTF-8/UTF-16, falling back to a language-appropriate legacy code page (Cyrillic, Arabic, Greek, CJK…).
+- Requests go direct first and then through your Cloudflare Worker (`CORS_PROXY`). Calls that carry an API key never use public proxies.
+- Only SRT/VTT files are supported (ASS, SUB and image-based formats are skipped).
+- Both providers are unofficial or third-party free services. They can rate-limit or change without notice.

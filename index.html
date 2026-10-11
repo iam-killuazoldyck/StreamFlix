@@ -493,6 +493,30 @@ main {
 @keyframes cloudSlide { 0% { margin-left:-35%; } 100% { margin-left:100%; } }
 
 
+
+/* ── SUBTITLE SEARCH ── */
+.ss-toggle { align-self:flex-start; flex:none; padding:8px 14px; }
+.sub-search { display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--border); padding-top:12px; }
+.sub-search[hidden], .ss-row[hidden] { display:none; }
+.ss-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.ss-input { flex:1; min-width:140px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:8px; font-family:'DM Sans',sans-serif; font-size:14px; outline:none; transition:border-color .2s; }
+.ss-input:focus { border-color:var(--red); }
+.ss-num { flex:none; width:84px; min-width:0; }
+.ss-titles { display:flex; flex-wrap:wrap; gap:6px; }
+.ss-chip { background:var(--surface2); border:1px solid var(--border); color:var(--text); border-radius:20px; padding:5px 12px; font-size:12px; cursor:pointer; font-family:'DM Sans',sans-serif; }
+.ss-chip:hover { border-color:rgba(255,255,255,.25); }
+.ss-chip.active { border-color:var(--red); background:rgba(229,9,20,.1); }
+.ss-status { font-size:12px; color:var(--muted); min-height:16px; }
+.ss-status.error { color:#f87171; }
+.ss-results { display:flex; flex-direction:column; gap:4px; max-height:260px; overflow-y:auto; }
+.ss-item { display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:7px 10px; font-size:12px; cursor:pointer; }
+.ss-item:hover { border-color:rgba(255,255,255,.2); }
+.ss-item.active { border-color:var(--red); background:rgba(229,9,20,.08); }
+.ss-lang { font-size:10px; letter-spacing:.5px; text-transform:uppercase; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:2px 8px; flex-shrink:0; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ss-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ss-by, .ss-note { color:var(--muted); font-size:11px; flex-shrink:0; }
+.ss-note { text-decoration:underline; }
+
 /* ── RESPONSIVE ── */
 @media (max-width:700px) {
   .pane-body { grid-template-columns: 1fr; }
@@ -565,6 +589,28 @@ main {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 3l-4 4-4-4"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
           Add
         </button>
+      </div>
+
+      <button class="pane-btn pane-btn-ghost ss-toggle" id="subSearchToggle" type="button">🔎 Search subtitles online</button>
+      <div class="sub-search" id="subSearchPanel" hidden>
+        <div class="ss-row">
+          <select id="ssProvider" class="mode-select" aria-label="Subtitle source"></select>
+          <select id="ssLang" class="mode-select" aria-label="Language"></select>
+        </div>
+        <div class="ss-row" id="ssKeyRow" hidden>
+          <input type="password" id="ssKey" class="ss-input" placeholder="SubDL API key" autocomplete="off" spellcheck="false">
+          <button class="cloud-cancel" id="ssKeySave" type="button">Save key</button>
+          <a class="ss-note" href="https://subdl.com/panel/api" target="_blank" rel="noopener">Get a free key</a>
+        </div>
+        <div class="ss-row">
+          <input type="text" id="ssQuery" class="ss-input" placeholder="Title, or an IMDb id like tt0133093" autocomplete="off" spellcheck="false">
+          <input type="number" id="ssSeason" class="ss-input ss-num" placeholder="Season" min="1" inputmode="numeric" aria-label="Season">
+          <input type="number" id="ssEpisode" class="ss-input ss-num" placeholder="Episode" min="1" inputmode="numeric" aria-label="Episode">
+          <button class="btn" id="ssSearch" type="button">Search</button>
+        </div>
+        <div class="ss-titles" id="ssTitles"></div>
+        <div class="ss-status" id="ssStatus"></div>
+        <div class="ss-results" id="ssResults"></div>
       </div>
     </div>
 
@@ -976,7 +1022,7 @@ function clearTracks() {
 }
 
 /* ── Parsers ── */
-function parseSrtTime(s) { const [hms,ms]=s.split(','); const [h,m,sec]=hms.split(':').map(Number); return h*3600+m*60+sec+Number(ms)/1000; }
+function parseSrtTime(s) { const [hms,ms='0']=s.trim().replace('.',',').split(','); const [h,m,sec]=hms.split(':').map(Number); return h*3600+m*60+sec+Number(ms.padEnd(3,'0').slice(0,3))/1000; }
 function parseVttTime(s) { const parts=s.trim().split(':').map(Number); return parts.length===3 ? parts[0]*3600+parts[1]*60+parts[2] : parts[0]*60+parts[1]; }
 function parseSrt(raw) {
   const cues=[];
@@ -1130,19 +1176,40 @@ function updatePaneTimestamps() {
   document.getElementById('stampSub').textContent = nextCue ? fmtMs(nextCue.start + subtitleOffset) : '—';
 }
 
-/* ── CORS-fallback fetch ── */
-async function fetchSubText(url) {
+/* ── CORS-fallback fetch (bytes). apiCall=true restricts to direct + your own proxy,
+      so API keys in query strings never reach third-party public proxies. ── */
+async function fetchSubBuffer(url, { apiCall = false } = {}) {
   const attempts = [
     () => fetch(url),
     () => fetch(`${CORS_PROXY}${encodeURIComponent(url)}`),
-    () => fetch(`https://proxy.corsfix.com/?${url}`),
-    () => fetch(`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`),
-    () => fetch(`https://crossorigin.me/${encodeURIComponent(url)}`),
   ];
+  if (!apiCall) attempts.push(
+    () => fetch(`https://proxy.corsfix.com/?${url}`),
+    () => fetch(`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`)
+  );
   for (const attempt of attempts) {
-    try { const res=await attempt(); if (res.ok) return await res.text(); } catch(_) {}
+    try { const res = await attempt(); if (res.ok) return await res.arrayBuffer(); } catch(_) {}
   }
-  throw new Error('All proxies failed');
+  throw new Error('Could not fetch (blocked by CORS or network error)');
+}
+const decodeSub = (buf) => window.SubtitleCore ? SubtitleCore.decodeBytes(buf) : new TextDecoder().decode(buf);   // handles UTF-16 / legacy code pages
+
+/** Parse subtitle text (SRT or VTT), load it into the player and the sync pane. Returns true on success. */
+function ingestSubtitleText(rawText) {
+  if (!rawText) { toast('⚠️ Empty subtitle file'); return false; }
+  const isSrt = !/^\s*WEBVTT/.test(rawText);
+  const cues = isSrt ? parseSrt(rawText) : parseVtt(rawText);
+  if (!cues.length) { toast('⚠️ No cues found in subtitle file'); return false; }
+
+  subtitleOffset = 0;
+  updateOffsetUI();
+  updateFineSlider();
+  lastCues = cues;
+  loadCuesIntoTrack(cues);
+  renderCueList();
+  toast('✓ Subtitles loaded — ' + cues.length + ' cues');
+  syncPane.classList.remove('collapsed');
+  return true;
 }
 
 async function addSubtitle() {
@@ -1150,28 +1217,12 @@ async function addSubtitle() {
   const file = document.getElementById('subFile').files[0];
   if (!url && !file) { toast('Paste a URL or pick a file first'); return; }
 
-  subtitleOffset = 0;
-  updateOffsetUI();
-  updateFineSlider();
-
-  let rawText = null, isSrt = false;
+  let rawText = null;
   try {
-    if (url) { rawText = await fetchSubText(url); isSrt = /\.srt(\?.*)?$/i.test(url); }
-    else if (file) { rawText = await file.text(); isSrt = file.name.toLowerCase().endsWith('.srt'); }
+    if (url) rawText = decodeSub(await fetchSubBuffer(url));
+    else rawText = decodeSub(await file.arrayBuffer());
   } catch { toast('⚠️ Subtitle blocked by CORS — try uploading the file directly'); return; }
-
-  if (!rawText) { toast('⚠️ Empty subtitle file'); return; }
-  // Cloud-hosted subtitle URLs are signed (no extension at the end), so also sniff the content
-  if (!isSrt && !/^\s*WEBVTT/.test(rawText) && /^\s*\d+\s*\n\s*\d{2}:\d{2}:\d{2},\d{3}\s*-->/.test(rawText)) isSrt = true;
-  const cues = isSrt ? parseSrt(rawText) : parseVtt(rawText);
-  if (!cues.length) { toast('⚠️ No cues found in subtitle file'); return; }
-
-  lastCues = cues;
-  loadCuesIntoTrack(cues);
-  renderCueList();
-  toast('✓ Subtitles loaded — ' + cues.length + ' cues');
-
-  syncPane.classList.remove('collapsed');
+  ingestSubtitleText(rawText);
 }
 
 /* ════════════════════════════════
@@ -1528,5 +1579,7 @@ document.addEventListener('keydown', e => {
   }
 });
 </script>
+<script src="subtitles/subtitle-core.js"></script>
+<script src="subtitles/subtitle-ui.js"></script>
 </body>
 </html>
